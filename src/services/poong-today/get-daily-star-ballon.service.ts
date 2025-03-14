@@ -1,5 +1,7 @@
-import { BaseScraperService } from "../base.scraper.service";
+import { Service } from "@prisma/client";
+import { prisma } from "../../libs/prisma.libs";
 import { NumberNormalizer } from "../../utils/normalize-number.util";
+import { BaseScraperService } from "../base.scraper.service";
 export class GetDailyStarBallon extends BaseScraperService {
   private readonly pageUrl: string =
     "https://poong.today/rankings/broadcast/history";
@@ -24,6 +26,19 @@ export class GetDailyStarBallon extends BaseScraperService {
     }>
   > {
     if (this.isRunning) throw new Error("Scraper is already running");
+
+    await prisma.serviceCrawl.upsert({
+      where: {
+        service: Service.POONG_TODAY,
+      },
+      update: {
+        lastCrawledAt: new Date(),
+      },
+      create: {
+        service: Service.POONG_TODAY,
+        lastCrawledAt: new Date(),
+      },
+    });
 
     try {
       const channelList: Array<{
@@ -87,7 +102,7 @@ export class GetDailyStarBallon extends BaseScraperService {
         ] = await this.getElementsText(statisticElements);
 
         const channel = {
-          id: id?.split("/")[4] ?? "",
+          channelId: id?.split("/")[4] ?? "",
           channelIconUrl: channelIcon ?? "",
           channelName: channelName ?? "",
           channelCategory: channelCategory ?? "",
@@ -103,7 +118,16 @@ export class GetDailyStarBallon extends BaseScraperService {
           ),
         };
 
-        channelList.push(channel);
+        if (channel.channelId) {
+          await prisma.channel.upsert({
+            where: {
+              channelId: channel.channelId,
+            },
+            update: channel,
+            create: channel,
+          });
+        }
+
         this.crawledCount++;
       }
       await this.closeBrowser();

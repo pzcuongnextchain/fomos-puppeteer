@@ -1,6 +1,6 @@
-import { Router, Request, Response } from "express";
-import { GetDailyStarBallon } from "../../services/poong-today/get-daily-star-ballon.service";
+import { Request, Response, Router } from "express";
 import { GetBroadcaseChannelHistory } from "../../services/poong-today/get-broadcase-channel-history.service";
+import { GetDailyStarBallon } from "../../services/poong-today/get-daily-star-ballon.service";
 
 export class PoongTodayRouter {
   private router: Router;
@@ -28,6 +28,7 @@ export class PoongTodayRouter {
 
   private async getDailyStarBallon(req: Request, res: Response) {
     try {
+      console.log("getDailyStarBallon");
       const result = await this.scraperService.startScraping();
       res.json(result);
     } catch (error) {
@@ -37,9 +38,7 @@ export class PoongTodayRouter {
 
   private async getBroadcaseChannelHistory(req: Request, res: Response) {
     try {
-      console.log(req.body);
-      const userIds = req.body.userIds;
-      const result = await this.broadcaseChannelHistory.startScraping(userIds);
+      const result = await this.broadcaseChannelHistory.startScraping();
       res.json(result);
     } catch (error) {
       console.error(error);

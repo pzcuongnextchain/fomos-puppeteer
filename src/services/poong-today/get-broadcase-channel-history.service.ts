@@ -1,10 +1,12 @@
+import { Service } from "@prisma/client";
 import axios from "axios";
+import { prisma } from "../../libs/prisma.libs";
 
 export class GetBroadcaseChannelHistory {
   private readonly apiUrl: string = "https://static.poong.today/sooplive/api";
   private isRunning: boolean = false;
 
-  public async startScraping(userIds: Array<string>): Promise<
+  public async startScraping(): Promise<
     Array<{
       id: string;
       creationDate: string;
@@ -34,8 +36,23 @@ export class GetBroadcaseChannelHistory {
         cumulativeBroadcastTime: number;
       }> = [];
 
-      for (const userId of userIds) {
-        const url = `${this.apiUrl}/${userId}/station`;
+      const channels = await prisma.channel.findMany({
+        where: {
+          service: Service.PLAYBOARD_CO,
+        },
+        select: {
+          channelId: true,
+        },
+        take: 100,
+      });
+
+      console.log("Channels to process:", channels.length);
+
+      for (const childChannel of channels) {
+        const channelId = childChannel.channelId;
+        console.log("Processing channel:", channelId);
+
+        const url = `${this.apiUrl}/${channelId}/station`;
         const stationResponse = await axios.get(url, {
           headers: {
             "Content-Type": "application/json",
@@ -46,7 +63,7 @@ export class GetBroadcaseChannelHistory {
         });
 
         const detailResponse = await axios.get(
-          `${this.apiUrl}/${userId}/station/detail`,
+          `${this.apiUrl}/${channelId}/station/detail`,
           {
             headers: {
               "Content-Type": "application/json",
@@ -71,11 +88,11 @@ export class GetBroadcaseChannelHistory {
         const supporters = detailData.count.supporter;
 
         const channel = {
-          id: userId,
-          creationDate: creationDate,
-          recentBroadcastDate: recentBroadcastDate,
+          channelId: channelId,
+          creationDate: new Date(creationDate),
+          recentBroadcastDate: new Date(recentBroadcastDate),
           favorites: favorites,
-          numberOfSubscribers: numberOfSubscribers,
+          cumulativeSubscribers: numberOfSubscribers,
           fanClub: fanClub,
           supporters: supporters,
           cumulativeViewers: cumulativeViewers,
@@ -83,7 +100,13 @@ export class GetBroadcaseChannelHistory {
           cumulativeBroadcastTime: cumulativeBroadcastTime,
         };
 
-        channelList.push(channel);
+        if (channel.channelId) {
+          await prisma.channel.upsert({
+            where: { channelId },
+            update: channel,
+            create: channel,
+          });
+        }
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
