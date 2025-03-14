@@ -19,3 +19,7 @@ lerna-debug.log*
 /az.dictionary.txt
 /az.dictionary-bkp.txt
 .qodo
+
+# Prisma
+/prisma/migrations
+/prisma/dev.db

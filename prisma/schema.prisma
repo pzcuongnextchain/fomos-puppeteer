@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Channel {
+  id                  Int      @id @default(autoincrement())
+  channelId           String   @unique
+  service             Service  @default(PLAYBOARD_CO)
+  channelIconUrl      String?
+  channelName         String?
+  channelTags         String?
+  channelCustomURL    String?
+  channelCategory     String?
+  channelDescription  String?
+  creationDate        DateTime?
+  recentBroadcastDate DateTime?
+  numberOfUploadedVideos Int?
+
+  favorites Int?
+  fanClub Int?
+  supporters Int?
+  cumulativeViewers Int?
+  cumulativeUpCount Int?
+  cumulativeBroadcastTime Int?
+  cumulativeSubscribers Int?
+
+  hourlyStarBalloonRate Int?
+  dailyViewerCount Int?
+  dailyStarBalloonGifts Int?
+  dailyReceivedStarBalloons Int?
+  dailyNewSubscribers Int?
+  dailySuperChat Int?
+  dailyLiveViewers Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id Int @id @default(autoincrement())
+  categoryId String @unique
+  categoryName String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ServiceCrawl {
+  id        Int      @id @default(autoincrement())
+  service   Service  @unique
+  lastCrawledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Service {
+  PLAYBOARD_CO
+  YOUTUBE
+  POONG_TODAY
+  VIEWERSHIP
+} 

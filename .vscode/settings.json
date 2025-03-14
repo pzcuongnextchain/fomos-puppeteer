@@ -1,0 +1,23 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "eslint.alwaysShowStatus": true,
+  "eslint.format.enable": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit",
+    "source.fixAll.organizeImports": "explicit"
+  },
+  "prettier.endOfLine": "auto",
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/.git/**": true
+  },
+  "editor.cursorBlinking": "solid",
+  "editor.smoothScrolling": false,
+  "editor.renderWhitespace": "none",
+  "editor.minimap.enabled": false,
+  "editor.codeLens": false
+}
