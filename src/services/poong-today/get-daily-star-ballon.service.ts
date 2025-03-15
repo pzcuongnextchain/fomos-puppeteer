@@ -116,6 +116,7 @@ export class GetDailyStarBallon extends BaseScraperService {
           dailyStarBalloonGifts: NumberNormalizer.normalizeInteger(
             dailyStarBalloonGifts
           ),
+          service: Service.POONG_TODAY,
         };
 
         if (channel.channelId) {

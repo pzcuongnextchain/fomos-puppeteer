@@ -1,4 +1,6 @@
+import { Service } from "@prisma/client";
 import axios from "axios";
+import { prisma } from "../../libs/prisma.libs";
 
 export class GetBroadcastYoutubeChannel {
   private readonly apiUrl: string =
@@ -22,6 +24,19 @@ export class GetBroadcastYoutubeChannel {
     }>
   > {
     if (this.isRunning) throw new Error("Scraper is already running");
+
+    await prisma.serviceCrawl.upsert({
+      where: {
+        service: Service.YOUTUBE,
+      },
+      update: {
+        lastCrawledAt: new Date(),
+      },
+      create: {
+        service: Service.YOUTUBE,
+        lastCrawledAt: new Date(),
+      },
+    });
 
     try {
       const channelList: Array<{
@@ -55,8 +70,8 @@ export class GetBroadcastYoutubeChannel {
       );
 
       // Get top 5 categories
-      const topCategories = categoriesResponse.data.items.slice(0, 5);
-
+      // const topCategories = categoriesResponse.data.items.slice(0, 5);
+      const topCategories = categoriesResponse.data.items;
       for (const category of topCategories) {
         const categoryId = category.id;
         const categoryName = category.snippet.title;
@@ -67,6 +82,7 @@ export class GetBroadcastYoutubeChannel {
           {
             params: {
               part: "snippet",
+              eventType: "live",
               type: "video",
               videoCategoryId: categoryId,
               regionCode: "KR",
@@ -121,9 +137,9 @@ export class GetBroadcastYoutubeChannel {
           ) {
             const channelData = channelResponse.data.items[0];
 
-            categoryChannels.items.push({
-              id: channelId as string,
-              cumulativeViews: parseInt(channelData.statistics.viewCount, 10),
+            const channel = {
+              channelId: channelId as string,
+              cumulativeViewers: parseInt(channelData.statistics.viewCount, 10),
               cumulativeSubscribers: parseInt(
                 channelData.statistics.subscriberCount,
                 10
@@ -132,10 +148,33 @@ export class GetBroadcastYoutubeChannel {
                 channelData.statistics.videoCount,
                 10
               ),
-              channelCreationDate: channelData.snippet.publishedAt,
-              channelName: channelData.snippet.title as string,
-              channelDescription: channelData.snippet.description as string,
-              channelCustomURL: channelData.snippet.customUrl as string,
+              creationDate: channelData?.snippet?.publishedAt as string,
+              channelName: channelData?.snippet?.title as string,
+              channelDescription: channelData?.snippet?.description as string,
+              channelCustomURL: channelData?.snippet?.customUrl as string,
+              channelCategory: categoryName,
+              service: Service.YOUTUBE,
+            };
+
+            categoryChannels.items.push({
+              id: channel.channelId as string,
+              cumulativeViews: channel.cumulativeViewers,
+              cumulativeSubscribers: channel.cumulativeSubscribers,
+              numberOfUploadedVideos: channel.numberOfUploadedVideos,
+              channelCreationDate: channel.creationDate,
+              channelName: channel.channelName,
+              channelDescription: channel.channelDescription,
+              channelCustomURL: channel.channelCustomURL,
+            });
+
+            console.log("channel", channel);
+
+            await prisma.channel.upsert({
+              where: {
+                channelId: channel.channelId as string,
+              },
+              update: channel,
+              create: channel,
             });
           }
         }

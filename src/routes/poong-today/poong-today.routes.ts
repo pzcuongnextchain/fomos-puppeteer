@@ -20,7 +20,7 @@ export class PoongTodayRouter {
       this.getDailyStarBallon.bind(this)
     );
 
-    this.router.post(
+    this.router.get(
       "/get-broadcase-channel-history",
       this.getBroadcaseChannelHistory.bind(this)
     );

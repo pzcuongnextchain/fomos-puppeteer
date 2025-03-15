@@ -1,12 +1,13 @@
-import { BaseScraperService } from "../base.scraper.service";
+import { Service } from "@prisma/client";
+import { prisma } from "../../libs/prisma.libs";
 import { NumberNormalizer } from "../../utils/normalize-number.util";
+import { BaseScraperService } from "../base.scraper.service";
 // import axios from "axios";
 export class GetViewedPuppeteerStatistic extends BaseScraperService {
   private readonly pageUrl: string =
     "https://playboard.co/en/youtube-ranking/most-viewed-all-channels-in-south-korea-daily";
-  private readonly apiUrl: string = "https://lapi.playboard.co/v1/channel";
-  private readonly targetCount: number = 99;
-
+  private readonly loginUrl: string = "https://playboard.co/en/account/signin";
+  private readonly targetCount: number = 200;
   constructor() {
     super();
     this.crawledCount = 0;
@@ -41,6 +42,9 @@ export class GetViewedPuppeteerStatistic extends BaseScraperService {
       }> = [];
 
       await this.openBrowser();
+      await this.login();
+      await this.page?.waitForTimeout(5000);
+
       this.isRunning = true;
 
       await this.navigateToPage(this.pageUrl);
@@ -52,7 +56,19 @@ export class GetViewedPuppeteerStatistic extends BaseScraperService {
         rowsElements = rowsElements.slice(0, this.targetCount);
       }
 
+      let index = 0;
       for (const rowElement of rowsElements) {
+        const categoryElement = await this.findChildElement(rowElement, "span");
+
+        const category = await this.getElementText(categoryElement);
+
+        console.log(
+          "Start crawling category",
+          category,
+          index++,
+          rowsElements.length
+        );
+
         await this.clickElement(rowElement);
         await this.loadAllUntilCount(null, ".current", this.targetCount);
 
@@ -87,14 +103,6 @@ export class GetViewedPuppeteerStatistic extends BaseScraperService {
             channelElement,
             " .name li > a"
           );
-          const scoreElements = await this.findChildElement(
-            channelElement,
-            " .score"
-          );
-          const dailyNewSubscribersElement = await this.findChildElement(
-            channelElement,
-            " .score > span"
-          );
 
           const id = await this.getElementAttribute(idElement, "href");
 
@@ -107,38 +115,40 @@ export class GetViewedPuppeteerStatistic extends BaseScraperService {
           const channelCategory = await this.getElementsText(
             channelCategoryElement
           );
-          const cumulativeSubscribers = await this.getElementText(
-            scoreElements
+          const cumulativeViewersElement = await this.findChildElement(
+            channelElement,
+            " .score > span:nth-of-type(1)"
           );
 
-          const dailyNewSubscribers = await this.getElementText(
-            dailyNewSubscribersElement
+          const cumulativeViewers = await this.getElementText(
+            cumulativeViewersElement
           );
 
           const channelId = id?.split("/")[5] ?? "";
 
           const channel = {
-            id: channelId,
+            channelId,
             channelIconUrl: channelIcon ?? "",
             channelName: channelName ?? "",
             channelTags: channelCategory.join(",") ?? "",
-            cumulativeSubscribers: NumberNormalizer.normalizeInteger(
-              cumulativeSubscribers
-            ),
-            dailyNewSubscribers:
-              NumberNormalizer.normalizeInteger(dailyNewSubscribers),
-            dailySuperChat: 0,
-            dailyLiveViewers: 0,
-            dailyViews: 0,
+            cumulativeViewers:
+              NumberNormalizer.normalizeInteger(cumulativeViewers),
+            service: Service.PLAYBOARD_CO,
+            channelCategory: category,
           };
 
-          channelList.push(channel);
-
-          // await new Promise((resolve) => setTimeout(resolve, 1000));
+          await prisma.channel.upsert({
+            where: {
+              channelId,
+            },
+            update: channel,
+            create: channel,
+          });
 
           this.crawledCount++;
         }
-        break;
+        console.log("Waiting 30 seconds");
+        await new Promise((resolve) => setTimeout(resolve, 30000));
       }
       await this.closeBrowser();
       this.isFinished = true;
@@ -149,5 +159,16 @@ export class GetViewedPuppeteerStatistic extends BaseScraperService {
       this.isRunning = false;
       throw error;
     }
+  }
+
+  public async login() {
+    await this.navigateToPage(this.loginUrl);
+
+    await this.inputText(`input[name="email"]`, "pzcuong.uit@gmail.com");
+    await this.inputText(`input[name="password"]`, "01242663149");
+
+    await this.clickElement(
+      await this.findFirstElement(`button[type="submit"]`)
+    );
   }
 }

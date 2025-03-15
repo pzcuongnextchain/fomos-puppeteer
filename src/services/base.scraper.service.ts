@@ -1,3 +1,4 @@
+import * as dotenv from "dotenv";
 import {
   Browser,
   ElementHandle,
@@ -5,7 +6,6 @@ import {
   Page,
   WaitForOptions,
 } from "puppeteer-core";
-import * as dotenv from "dotenv";
 import puppeteerExtra from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 
@@ -28,7 +28,7 @@ export abstract class BaseScraperService {
   protected currentPageNo: number = 0;
   protected totalPages: number = 0;
   protected crawledCount: number = 0;
-  protected timeout: number = 10000;
+  protected timeout: number = 20000;
 
   protected readonly isHeadless: boolean =
     process.env.IS_HEADLESS == null ? true : process.env.IS_HEADLESS === "true";
@@ -155,6 +155,11 @@ export abstract class BaseScraperService {
     return elements[elements.length - 1];
   }
 
+  protected async inputText(selector: string, text: string) {
+    if (!this.page) throw new Error("Browser page not initialized");
+    await this.page.type(selector, text);
+  }
+
   protected async getElementText(
     element: ElementHandle
   ): Promise<string | null> {
@@ -216,6 +221,12 @@ export abstract class BaseScraperService {
       let afterCount = beforeCount;
 
       while (afterCount <= beforeCount && Date.now() - startTime < timeoutMs) {
+        await this.page?.evaluate(() => {
+          window.scrollTo(0, document.body.scrollHeight);
+        });
+
+        await this.page?.waitForTimeout(500);
+
         afterCount = (await this.findElements(contentItemSelector)).length;
       }
 
@@ -254,9 +265,9 @@ export abstract class BaseScraperService {
       const currentCount = (await this.findElements(contentItemSelector))
         .length;
 
-      console.log(attempts);
-      console.log(currentCount);
-      console.log(targetCount);
+      console.log("currentCount", currentCount);
+      console.log("targetCount", targetCount);
+      console.log("hasMore", hasMore);
 
       if (currentCount >= targetCount) break;
     }

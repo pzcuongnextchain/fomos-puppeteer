@@ -1,11 +1,12 @@
-import { BaseScraperService } from "../base.scraper.service";
+import { Service } from "@prisma/client";
+import { prisma } from "../../libs/prisma.libs";
 import { NumberNormalizer } from "../../utils/normalize-number.util";
-// import axios from "axios";
+import { BaseScraperService } from "../base.scraper.service";
 export class GetLiveViewersPuppeteerStatistic extends BaseScraperService {
   private readonly pageUrl: string =
     "https://playboard.co/en/youtube-ranking/most-watched-all-channels-in-south-korea-daily";
-  private readonly apiUrl: string = "https://lapi.playboard.co/v1/channel";
-  private readonly targetCount: number = 100;
+  private readonly loginUrl: string = "https://playboard.co/en/account/signin";
+  private readonly targetCount: number = 200;
 
   constructor() {
     super();
@@ -18,32 +19,48 @@ export class GetLiveViewersPuppeteerStatistic extends BaseScraperService {
       channelIconUrl: string;
       channelName: string;
       channelTags: string;
-      cumulativeSubscribers: number;
-      dailyNewSubscribers: number;
-      dailySuperChat: number;
-      dailyLiveViewers: number;
-      dailyViews: number;
+      cumulativeViewers: number;
+      dailyViewerCount: number;
+      service: Service;
     }>
   > {
     if (this.isRunning) throw new Error("Scraper is already running");
 
+    await prisma.serviceCrawl.upsert({
+      where: {
+        service: Service.PLAYBOARD_CO,
+      },
+      update: {
+        lastCrawledAt: new Date(),
+      },
+      create: {
+        service: Service.PLAYBOARD_CO,
+        lastCrawledAt: new Date(),
+      },
+    });
     try {
       const channelList: Array<{
         id: string;
         channelIconUrl: string;
         channelName: string;
         channelTags: string;
-        cumulativeSubscribers: number;
-        dailyNewSubscribers: number;
-        dailySuperChat: number;
-        dailyLiveViewers: number;
-        dailyViews: number;
+        cumulativeViewers: number;
+        dailyViewerCount: number;
+        service: Service;
       }> = [];
 
       await this.openBrowser();
       this.isRunning = true;
 
+      await this.login();
+      await this.page?.waitForTimeout(5000);
+
       await this.navigateToPage(this.pageUrl);
+
+      await this.clickElement(await this.findFirstElement(".menu__language"));
+      await this.clickElement(await this.findFirstElement(".popup li span"));
+
+      await this.page?.waitForTimeout(1000);
 
       const rowSelector = ".shelf > div:first-of-type li:not(:first-child)";
       let rowsElements = await this.findElements(rowSelector);
@@ -52,7 +69,17 @@ export class GetLiveViewersPuppeteerStatistic extends BaseScraperService {
         rowsElements = rowsElements.slice(0, this.targetCount);
       }
 
+      let index = 0;
       for (const rowElement of rowsElements) {
+        const categoryElement = await this.findChildElement(rowElement, "span");
+        const category = await this.getElementText(categoryElement);
+
+        console.log(
+          `Start crawling category ${category}, ${index++}/${
+            rowsElements.length
+          }`
+        );
+
         await this.clickElement(rowElement);
         await this.loadAllUntilCount(null, ".current", this.targetCount);
 
@@ -113,62 +140,38 @@ export class GetLiveViewersPuppeteerStatistic extends BaseScraperService {
             dailyNewSubscribersElement
           );
 
-          const channelId = id?.split("/")[5] ?? "";
-
-          // const headers = {
-          //   "Content-Type": "application/json",
-          //   Authorization:
-          //     "Bearer Vu5juigpa-vYp78lBzRJRySJH5d4T6fD75GCcmIm2O2COQi173Yq3BokXOokSK_brMUQmbVe-ZvOxaM1uhJ5Dg4b9iCWrI97gNyR_z3fuxLtJV4fjbOMtXvviAd1kb37",
-          // };
-
-          // const [donationResponse, trendResponse, viewResponse] =
-          //   await Promise.all([
-          //     axios.get(
-          //       `${this.apiUrl}/${channelId}/donation/trend?currency=USD&interval=d&tz=Asia%2FBangkok&locale=en-US`,
-          //       { headers }
-          //     ),
-          //     axios.get(
-          //       `${this.apiUrl}/${channelId}/live/viewer/trend?interval=d&tz=Asia%2FBangkok&locale=en-US`,
-          //       { headers }
-          //     ),
-          //     axios.get(
-          //       `${this.apiUrl}/${channelId}/views/trend?interval=d&tz=Asia%2FBangkok&locale=en-US`,
-          //       { headers }
-          //     ),
-          //   ]);
-
-          // const dailySuperChat = donationResponse.data.stats.today;
-          // const dailyLiveViewers =
-          //   trendResponse.data.sheet.rows[
-          //     trendResponse.data.sheet.rows.length - 1
-          //   ][1] || 0;
-          // const dailyViews =
-          //   viewResponse.data.sheet.rows[
-          //     viewResponse.data.sheet.rows.length - 1
-          //   ][1] || 0;
+          const channelId = id?.split("/")[4] ?? "";
+          console.log("channelId", channelId);
+          console.log("channel", id);
 
           const channel = {
-            id: channelId,
+            channelId: channelId,
             channelIconUrl: channelIcon ?? "",
             channelName: channelName ?? "",
             channelTags: channelCategory.join(",") ?? "",
-            cumulativeSubscribers: NumberNormalizer.normalizeInteger(
+            cumulativeViewers: NumberNormalizer.normalizeInteger(
               cumulativeSubscribers
             ),
-            dailyNewSubscribers:
+            dailyViewerCount:
               NumberNormalizer.normalizeInteger(dailyNewSubscribers),
-            dailySuperChat: 0,
-            dailyLiveViewers: 0,
-            dailyViews: 0,
+            service: Service.PLAYBOARD_CO,
+            channelCategory: category,
           };
 
-          channelList.push(channel);
-
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          await prisma.channel.upsert({
+            where: {
+              channelId: channelId,
+            },
+            update: channel,
+            create: channel,
+          });
 
           this.crawledCount++;
         }
-        break;
+        console.log(
+          `Crawled ${this.crawledCount} channels, waiting 20 seconds`
+        );
+        await new Promise((resolve) => setTimeout(resolve, 20000));
       }
       await this.closeBrowser();
       this.isFinished = true;
@@ -179,5 +182,16 @@ export class GetLiveViewersPuppeteerStatistic extends BaseScraperService {
       this.isRunning = false;
       throw error;
     }
+  }
+
+  public async login() {
+    await this.navigateToPage(this.loginUrl);
+
+    await this.inputText(`input[name="email"]`, "pzcuong.uit@gmail.com");
+    await this.inputText(`input[name="password"]`, "01242663149");
+
+    await this.clickElement(
+      await this.findFirstElement(`button[type="submit"]`)
+    );
   }
 }

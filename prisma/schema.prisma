@@ -8,55 +8,51 @@ datasource db {
 }
 
 model Channel {
-  id                  Int      @id @default(autoincrement())
-  channelId           String   @unique
-  service             Service  @default(PLAYBOARD_CO)
-  channelIconUrl      String?
-  channelName         String?
-  channelTags         String?
-  channelCustomURL    String?
-  channelCategory     String?
-  channelDescription  String?
-  creationDate        DateTime?
-  recentBroadcastDate DateTime?
-  numberOfUploadedVideos Int?
-
-  favorites Int?
-  fanClub Int?
-  supporters Int?
-  cumulativeViewers Int?
-  cumulativeUpCount Int?
-  cumulativeBroadcastTime Int?
-  cumulativeSubscribers Int?
-
-  hourlyStarBalloonRate Int?
-  dailyViewerCount Int?
-  dailyStarBalloonGifts Int?
-  dailyReceivedStarBalloons Int?
-  dailyNewSubscribers Int?
-  dailySuperChat Int?
-  dailyLiveViewers Int?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                        Int       @id @default(autoincrement())
+  channelId                 String    @unique
+  service                   Service   @default(PLAYBOARD_CO)
+  channelIconUrl            String?
+  channelName               String?
+  channelTags               String?
+  channelCustomURL          String?
+  channelCategory           String?
+  channelDescription        String?
+  creationDate              DateTime?
+  recentBroadcastDate       DateTime?
+  numberOfUploadedVideos    BigInt?
+  favorites                 BigInt?
+  fanClub                   BigInt?
+  supporters                BigInt?
+  cumulativeViewers         BigInt?
+  cumulativeUpCount         BigInt?
+  cumulativeBroadcastTime   BigInt?
+  cumulativeSubscribers     BigInt?
+  hourlyStarBalloonRate     BigInt?
+  dailyViewerCount          BigInt?
+  dailyStarBalloonGifts     BigInt?
+  dailyReceivedStarBalloons BigInt?
+  dailyNewSubscribers       BigInt?
+  dailySuperChat            BigInt?
+  dailyLiveViewers          BigInt?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+  cumulativeSuperChat       BigInt?
 }
 
 model Category {
-  id Int @id @default(autoincrement())
-  categoryId String @unique
+  id           Int      @id @default(autoincrement())
+  categoryId   String   @unique
   categoryName String
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model ServiceCrawl {
-  id        Int      @id @default(autoincrement())
-  service   Service  @unique
+  id            Int       @id @default(autoincrement())
+  service       Service   @unique
   lastCrawledAt DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 enum Service {
@@ -64,4 +60,4 @@ enum Service {
   YOUTUBE
   POONG_TODAY
   VIEWERSHIP
-} 
+}
