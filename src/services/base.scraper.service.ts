@@ -1,4 +1,5 @@
 import * as dotenv from "dotenv";
+import puppeteer from "puppeteer";
 import {
   Browser,
   ElementHandle,
@@ -28,7 +29,7 @@ export abstract class BaseScraperService {
   protected currentPageNo: number = 0;
   protected totalPages: number = 0;
   protected crawledCount: number = 0;
-  protected timeout: number = 20000;
+  protected timeout: number = 60000;
 
   protected readonly isHeadless: boolean =
     process.env.IS_HEADLESS == null ? true : process.env.IS_HEADLESS === "true";
@@ -43,22 +44,38 @@ export abstract class BaseScraperService {
   }
 
   protected async openBrowser(): Promise<void> {
-    this.browser = await puppeteerExtra.launch({
-      headless: this.isHeadless,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-      ],
-      executablePath: process.env.CHROME_BIN,
-    });
-    this.page = await this.browser!.newPage();
+    try {
+      if (process.env.CHROME_BIN) {
+        this.browser = (await puppeteerExtra.launch({
+          headless: this.isHeadless,
+          executablePath: process.env.CHROME_BIN,
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+          ],
+        })) as unknown as Browser;
+      } else {
+        this.browser = (await puppeteer.launch({
+          headless: this.isHeadless,
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+          ],
+        })) as unknown as Browser;
+      }
 
-    await this.page.evaluateOnNewDocument(() => {
-      Object.defineProperty(navigator, "webdriver", {
-        get: () => false,
-      });
-    });
+      this.page = await this.browser!.newPage();
+      await this.page.setViewport({ width: 1920, height: 1080 });
+    } catch (error) {
+      console.error("Failed to launch browser:", error);
+      throw error;
+    }
+  }
+
+  async wait(milliseconds: number) {
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
   }
 
   protected async configurePage(options?: {
@@ -175,6 +192,15 @@ export abstract class BaseScraperService {
     }
   }
 
+  protected async getElementValue(
+    element: ElementHandle
+  ): Promise<string | null> {
+    if (!this.page) throw new Error("Browser page not initialized");
+    return await element.evaluate((el) => {
+      return (el as HTMLInputElement).value;
+    });
+  }
+
   protected async getElementsText(
     elements: Array<ElementHandle>
   ): Promise<Array<string | null>> {
@@ -207,6 +233,11 @@ export abstract class BaseScraperService {
     return element.click();
   }
 
+  protected async inputValue(selector: string, value: string) {
+    if (!this.page) throw new Error("Browser page not initialized");
+    await this.page.type(selector, value);
+  }
+
   protected async loadMoreContent(
     loadMoreSelector: string | null,
     contentItemSelector: string,
@@ -225,7 +256,7 @@ export abstract class BaseScraperService {
           window.scrollTo(0, document.body.scrollHeight);
         });
 
-        await this.page?.waitForTimeout(500);
+        await this.wait(500);
 
         afterCount = (await this.findElements(contentItemSelector)).length;
       }
@@ -234,7 +265,7 @@ export abstract class BaseScraperService {
         window.scrollTo(0, document.body.scrollHeight);
       });
 
-      await this.page?.waitForTimeout(50);
+      await this.wait(50);
 
       afterCount = (await this.findElements(contentItemSelector)).length;
 

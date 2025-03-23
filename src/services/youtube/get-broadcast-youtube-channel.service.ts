@@ -171,7 +171,10 @@ export class GetBroadcastYoutubeChannel {
 
             await prisma.channel.upsert({
               where: {
-                channelId: channel.channelId as string,
+                channelId_date: {
+                  channelId: channel.channelId as string,
+                  date: new Date(),
+                },
               },
               update: channel,
               create: channel,

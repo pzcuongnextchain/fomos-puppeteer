@@ -43,7 +43,7 @@ export class GetViewedPuppeteerStatistic extends BaseScraperService {
 
       await this.openBrowser();
       await this.login();
-      await this.page?.waitForTimeout(5000);
+      await this.wait(5000);
 
       this.isRunning = true;
 
@@ -139,7 +139,10 @@ export class GetViewedPuppeteerStatistic extends BaseScraperService {
 
           await prisma.channel.upsert({
             where: {
-              channelId,
+              channelId_date: {
+                channelId: channelId,
+                date: new Date(),
+              },
             },
             update: channel,
             create: channel,

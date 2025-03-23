@@ -59,7 +59,7 @@ export class GetSuperChattedPuppeteerStatistic extends BaseScraperService {
 
       await this.login();
 
-      await this.page?.waitForTimeout(5000);
+      await this.wait(5000);
 
       this.isRunning = true;
 
@@ -70,7 +70,7 @@ export class GetSuperChattedPuppeteerStatistic extends BaseScraperService {
       await this.clickElement(
         await this.findFirstElement(`.label--icon-currency`)
       );
-      await this.page?.waitForTimeout(2000);
+      await this.wait(2000);
       await this.clickElement(
         await this.findFirstElement(`.shortcut_language li:nth-of-type(3)`)
       );
@@ -78,7 +78,7 @@ export class GetSuperChattedPuppeteerStatistic extends BaseScraperService {
       await this.clickElement(await this.findFirstElement(".menu__language"));
       await this.clickElement(await this.findFirstElement(".popup li span"));
 
-      await this.page?.waitForTimeout(1000);
+      await this.wait(1000);
 
       const rowSelector = ".shelf > div:first-of-type li:not(:first-child)";
       let rowsElements = await this.findElements(rowSelector);
@@ -177,7 +177,10 @@ export class GetSuperChattedPuppeteerStatistic extends BaseScraperService {
 
           await prisma.channel.upsert({
             where: {
-              channelId,
+              channelId_date: {
+                channelId: channelId,
+                date: new Date(),
+              },
             },
             update: channel,
             create: channel,

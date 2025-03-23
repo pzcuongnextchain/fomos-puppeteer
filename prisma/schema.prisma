@@ -9,7 +9,7 @@ datasource db {
 
 model Channel {
   id                        Int       @id @default(autoincrement())
-  channelId                 String    @unique
+  channelId                 String    
   service                   Service   @default(PLAYBOARD_CO)
   channelIconUrl            String?
   channelName               String?
@@ -36,7 +36,10 @@ model Channel {
   dailyLiveViewers          BigInt?
   createdAt                 DateTime  @default(now())
   updatedAt                 DateTime  @updatedAt
+  date                      DateTime?
   cumulativeSuperChat       BigInt?
+
+  @@unique([channelId, date])
 }
 
 model Category {
