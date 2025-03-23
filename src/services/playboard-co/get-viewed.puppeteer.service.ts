@@ -7,7 +7,7 @@ export class GetViewedPuppeteerStatistic extends BaseScraperService {
   private readonly pageUrl: string =
     "https://playboard.co/en/youtube-ranking/most-viewed-all-channels-in-south-korea-daily";
   private readonly loginUrl: string = "https://playboard.co/en/account/signin";
-  private readonly targetCount: number = 200;
+  private readonly targetCount: number = 100;
   private readonly targetDate: string = "1742515200";
   private readonly initialDate: string = "1735732800";
 
@@ -37,7 +37,7 @@ export class GetViewedPuppeteerStatistic extends BaseScraperService {
       await this.openBrowser();
       console.log("open browser success");
 
-      await this.login();
+      // await this.login();
       console.log("login success");
       await this.wait(5000);
 
