@@ -210,9 +210,9 @@ export class GetBoradcastPuppeteerStatistic extends BaseScraperService {
               this.crawledCount++;
             }
             console.log(
-              `Crawled ${this.crawledCount} channels, waiting 60 seconds`
+              `Crawled ${this.crawledCount} channels, waiting 120 seconds`
             );
-            await new Promise((resolve) => setTimeout(resolve, 60000));
+            await new Promise((resolve) => setTimeout(resolve, 120000));
           } catch (error) {
             console.error(`Error processing row ${index}:`, error);
 

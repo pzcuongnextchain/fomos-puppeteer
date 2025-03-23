@@ -8,155 +8,229 @@ export class GetViewedPuppeteerStatistic extends BaseScraperService {
     "https://playboard.co/en/youtube-ranking/most-viewed-all-channels-in-south-korea-daily";
   private readonly loginUrl: string = "https://playboard.co/en/account/signin";
   private readonly targetCount: number = 200;
+  private readonly targetDate: string = "1742515200";
+  private readonly initialDate: string = "1735732800";
+
   constructor() {
     super();
     this.crawledCount = 0;
   }
 
-  public async startScraping(): Promise<
-    Array<{
-      id: string;
-      channelIconUrl: string;
-      channelName: string;
-      channelTags: string;
-      cumulativeSubscribers: number;
-      dailyNewSubscribers: number;
-      dailySuperChat: number;
-      dailyLiveViewers: number;
-      dailyViews: number;
-    }>
-  > {
+  public async startScraping() {
     if (this.isRunning) throw new Error("Scraper is already running");
 
-    try {
-      const channelList: Array<{
-        id: string;
-        channelIconUrl: string;
-        channelName: string;
-        channelTags: string;
-        cumulativeSubscribers: number;
-        dailyNewSubscribers: number;
-        dailySuperChat: number;
-        dailyLiveViewers: number;
-        dailyViews: number;
-      }> = [];
+    await prisma.serviceCrawl.upsert({
+      where: {
+        service: Service.PLAYBOARD_CO,
+      },
+      update: {
+        lastCrawledAt: new Date(),
+      },
+      create: {
+        service: Service.PLAYBOARD_CO,
+        lastCrawledAt: new Date(),
+      },
+    });
 
+    try {
+      console.log("open browser");
       await this.openBrowser();
+      console.log("open browser success");
+
       await this.login();
+      console.log("login success");
       await this.wait(5000);
 
       this.isRunning = true;
+      let crawledDate = this.initialDate;
 
-      await this.navigateToPage(this.pageUrl);
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        await this.navigateToPage(this.pageUrl);
 
-      const rowSelector = ".shelf > div:first-of-type li:not(:first-child)";
-      let rowsElements = await this.findElements(rowSelector);
+        await this.clickElement(await this.findFirstElement(".menu__language"));
+        await this.clickElement(await this.findFirstElement(".popup li span"));
 
-      if (rowsElements.length > this.targetCount) {
-        rowsElements = rowsElements.slice(0, this.targetCount);
-      }
+        await this.wait(1000);
 
-      let index = 0;
-      for (const rowElement of rowsElements) {
-        const categoryElement = await this.findChildElement(rowElement, "span");
+        const rowSelector = ".shelf > div:first-of-type li:not(:first-child)";
+        let rowsElements = await this.findElements(rowSelector);
 
-        const category = await this.getElementText(categoryElement);
-
-        console.log(
-          "Start crawling category",
-          category,
-          index++,
-          rowsElements.length
-        );
-
-        await this.clickElement(rowElement);
-        await this.loadAllUntilCount(null, ".current", this.targetCount);
-
-        console.log("====================LOADED====================");
-
-        const channelListSelector = ".sheet .chart__row";
-        const channelListElements = await this.findElements(
-          channelListSelector
-        );
-
-        for (const channelElement of channelListElements) {
-          const adsElement = await this.findChildElement(
-            channelElement,
-            " .ad__slot"
-          );
-
-          if (adsElement) continue;
-
-          const idElement = await this.findChildElement(
-            channelElement,
-            " td > a"
-          );
-          const channelIconElement = await this.findChildElement(
-            channelElement,
-            " .lazy-image img"
-          );
-          const channelNameElement = await this.findChildElement(
-            channelElement,
-            " .name > a > h3"
-          );
-          const channelCategoryElement = await this.findChildElements(
-            channelElement,
-            " .name li > a"
-          );
-
-          const id = await this.getElementAttribute(idElement, "href");
-
-          const channelIcon = await this.getElementAttribute(
-            channelIconElement,
-            "src"
-          );
-
-          const channelName = await this.getElementText(channelNameElement);
-          const channelCategory = await this.getElementsText(
-            channelCategoryElement
-          );
-          const cumulativeViewersElement = await this.findChildElement(
-            channelElement,
-            " .score > span:nth-of-type(1)"
-          );
-
-          const cumulativeViewers = await this.getElementText(
-            cumulativeViewersElement
-          );
-
-          const channelId = id?.split("/")[5] ?? "";
-
-          const channel = {
-            channelId,
-            channelIconUrl: channelIcon ?? "",
-            channelName: channelName ?? "",
-            channelTags: channelCategory.join(",") ?? "",
-            cumulativeViewers:
-              NumberNormalizer.normalizeInteger(cumulativeViewers),
-            service: Service.PLAYBOARD_CO,
-            channelCategory: category,
-          };
-
-          await prisma.channel.upsert({
-            where: {
-              channelId_date: {
-                channelId: channelId,
-                date: new Date(),
-              },
-            },
-            update: channel,
-            create: channel,
-          });
-
-          this.crawledCount++;
+        if (rowsElements.length > this.targetCount) {
+          rowsElements = rowsElements.slice(0, this.targetCount);
         }
-        console.log("Waiting 30 seconds");
-        await new Promise((resolve) => setTimeout(resolve, 30000));
+
+        let index = 0;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        for (const rowElement of rowsElements) {
+          try {
+            const categoryElement = await this.findChildElement(
+              rowsElements[index],
+              "span"
+            );
+            const category = await this.getElementText(categoryElement);
+
+            console.log(
+              "Start crawling category",
+              category,
+              index++,
+              rowsElements.length
+            );
+
+            await this.clickElement(rowsElements[index - 1]);
+
+            const currentPageUrl = this.page?.url();
+            console.log("currentPageUrl", currentPageUrl);
+
+            if (!currentPageUrl?.includes(crawledDate)) {
+              const pageUrlWithDate = currentPageUrl + `?period=${crawledDate}`;
+              await this.navigateToPage(pageUrlWithDate);
+
+              console.log("navigate to page", pageUrlWithDate);
+
+              // Add delay for manual CAPTCHA resolution if needed
+              await this.wait(5000);
+
+              // Re-find elements after navigation or CAPTCHA
+              rowsElements = await this.findElements(rowSelector);
+              if (rowsElements.length === 0) {
+                console.log(
+                  "Waiting for page to load or CAPTCHA resolution..."
+                );
+                // Wait longer for manual CAPTCHA resolution
+                await this.wait(30000);
+                // Try finding elements again
+                rowsElements = await this.findElements(rowSelector);
+
+                if (rowsElements.length > this.targetCount) {
+                  rowsElements = rowsElements.slice(0, this.targetCount);
+                }
+
+                // Adjust index if needed
+                if (index >= rowsElements.length) {
+                  index = 0;
+                }
+              }
+
+              // Wait for the page to be fully loaded
+              await this.page?.waitForSelector(".shelf");
+              await this.wait(2000);
+            }
+
+            await this.loadAllUntilCount(null, ".current", this.targetCount);
+
+            const channelListSelector = ".sheet .chart__row";
+            const channelListElements = await this.findElements(
+              channelListSelector
+            );
+
+            for (const channelElement of channelListElements) {
+              const adsElement = await this.findChildElement(
+                channelElement,
+                " .ad__slot"
+              );
+
+              if (adsElement) continue;
+
+              const idElement = await this.findChildElement(
+                channelElement,
+                " td > a"
+              );
+              const channelIconElement = await this.findChildElement(
+                channelElement,
+                " .lazy-image img"
+              );
+              const channelNameElement = await this.findChildElement(
+                channelElement,
+                " .name > a > h3"
+              );
+              const channelCategoryElement = await this.findChildElements(
+                channelElement,
+                " .name li > a"
+              );
+
+              const cumulativeViewersElement = await this.findChildElement(
+                channelElement,
+                " .score > span:nth-of-type(1)"
+              );
+
+              const id = await this.getElementAttribute(idElement, "href");
+              const channelIcon = await this.getElementAttribute(
+                channelIconElement,
+                "src"
+              );
+              const channelName = await this.getElementText(channelNameElement);
+              const channelCategory = await this.getElementsText(
+                channelCategoryElement
+              );
+              const cumulativeViewers = await this.getElementText(
+                cumulativeViewersElement
+              );
+
+              const channelId = id?.split("/")[5] ?? "";
+
+              const channel = {
+                channelId,
+                channelIconUrl: channelIcon ?? "",
+                channelName: channelName ?? "",
+                channelTags: channelCategory.join(",") ?? "",
+                cumulativeViewers:
+                  NumberNormalizer.normalizeInteger(cumulativeViewers),
+                service: Service.PLAYBOARD_CO,
+                channelCategory: category,
+                date: new Date(Number(crawledDate) * 1000),
+              };
+
+              await prisma.channel.upsert({
+                where: {
+                  channelId_date: {
+                    channelId: channelId,
+                    date: channel.date,
+                  },
+                },
+                update: channel,
+                create: channel,
+              });
+
+              this.crawledCount++;
+            }
+            console.log(
+              `Crawled ${this.crawledCount} channels, waiting 120 seconds`
+            );
+            await new Promise((resolve) => setTimeout(resolve, 120000));
+          } catch (error) {
+            console.error(`Error processing row ${index}:`, error);
+
+            // If we encounter an error, try to recover
+            console.log("Attempting to recover from error...");
+            await this.wait(10000);
+
+            // Re-navigate to the page
+            await this.navigateToPage(this.pageUrl);
+
+            // Re-find all elements
+            rowsElements = await this.findElements(rowSelector);
+            if (rowsElements.length > this.targetCount) {
+              rowsElements = rowsElements.slice(0, this.targetCount);
+            }
+
+            // Decrease index to retry the current row
+            index = Math.max(0, index - 1);
+            continue;
+          }
+        }
+
+        if (crawledDate > this.targetDate) {
+          break;
+        }
+
+        //add 1 day to crawledDate
+        crawledDate = (Number(crawledDate) + 86400).toString();
       }
+
       await this.closeBrowser();
       this.isFinished = true;
       this.isRunning = false;
-      return channelList;
     } catch (error) {
       console.error("Scraping failed:", error);
       this.isRunning = false;

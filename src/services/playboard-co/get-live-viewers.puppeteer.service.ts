@@ -30,25 +30,21 @@ export class GetLiveViewersPuppeteerStatistic extends BaseScraperService {
         lastCrawledAt: new Date(),
       },
     });
-    try {
-      const channelList: Array<{
-        id: string;
-        channelIconUrl: string;
-        channelName: string;
-        channelTags: string;
-        cumulativeViewers: number;
-        dailyViewerCount: number;
-        service: Service;
-      }> = [];
 
+    try {
+      console.log("open browser");
       await this.openBrowser();
+      console.log("open browser success");
+
+      await this.login();
+      console.log("login success");
+      await this.wait(5000);
+
       this.isRunning = true;
       let crawledDate = this.initialDate;
 
-      await this.login();
-      await this.wait(5000);
-
-      while (crawledDate < this.targetDate) {
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
         await this.navigateToPage(this.pageUrl);
 
         await this.clickElement(await this.findFirstElement(".menu__language"));
@@ -64,160 +60,190 @@ export class GetLiveViewersPuppeteerStatistic extends BaseScraperService {
         }
 
         let index = 0;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         for (const rowElement of rowsElements) {
-          const categoryElement = await this.findChildElement(
-            rowElement,
-            "span"
-          );
-          const category = await this.getElementText(categoryElement);
+          try {
+            const categoryElement = await this.findChildElement(
+              rowsElements[index],
+              "span"
+            );
+            const category = await this.getElementText(categoryElement);
 
-          console.log(
-            `Start crawling category ${category}, ${index++}/${
+            console.log(
+              "Start crawling category",
+              category,
+              index++,
               rowsElements.length
-            }`
-          );
+            );
 
-          await this.clickElement(rowsElements[index - 1]);
+            await this.clickElement(rowsElements[index - 1]);
 
-          const currentPageUrl = this.page?.url();
-          console.log("currentPageUrl", currentPageUrl);
+            const currentPageUrl = this.page?.url();
+            console.log("currentPageUrl", currentPageUrl);
 
-          if (!currentPageUrl?.includes(crawledDate)) {
-            const pageUrlWithDate = currentPageUrl + `?period=${crawledDate}`;
-            await this.navigateToPage(pageUrlWithDate);
+            if (!currentPageUrl?.includes(crawledDate)) {
+              const pageUrlWithDate = currentPageUrl + `?period=${crawledDate}`;
+              await this.navigateToPage(pageUrlWithDate);
 
-            console.log("navigate to page", pageUrlWithDate);
+              console.log("navigate to page", pageUrlWithDate);
 
-            // Add delay for manual CAPTCHA resolution if needed
-            await this.wait(5000);
+              // Add delay for manual CAPTCHA resolution if needed
+              await this.wait(5000);
 
-            // Re-find elements after navigation or CAPTCHA
-            rowsElements = await this.findElements(rowSelector);
-            if (rowsElements.length === 0) {
-              console.log("Waiting for page to load or CAPTCHA resolution...");
-              // Wait longer for manual CAPTCHA resolution
-              await this.wait(30000);
-              // Try finding elements again
+              // Re-find elements after navigation or CAPTCHA
               rowsElements = await this.findElements(rowSelector);
+              if (rowsElements.length === 0) {
+                console.log(
+                  "Waiting for page to load or CAPTCHA resolution..."
+                );
+                // Wait longer for manual CAPTCHA resolution
+                await this.wait(30000);
+                // Try finding elements again
+                rowsElements = await this.findElements(rowSelector);
 
-              if (rowsElements.length > this.targetCount) {
-                rowsElements = rowsElements.slice(0, this.targetCount);
+                if (rowsElements.length > this.targetCount) {
+                  rowsElements = rowsElements.slice(0, this.targetCount);
+                }
+
+                // Adjust index if needed
+                if (index >= rowsElements.length) {
+                  index = 0;
+                }
               }
 
-              // Adjust index if needed
-              if (index >= rowsElements.length) {
-                index = 0;
-              }
+              // Wait for the page to be fully loaded
+              await this.page?.waitForSelector(".shelf");
+              await this.wait(2000);
             }
 
-            // Wait for the page to be fully loaded
-            await this.page?.waitForSelector(".shelf");
-            await this.wait(2000);
-          }
+            await this.loadAllUntilCount(null, ".current", this.targetCount);
 
-          await this.loadAllUntilCount(null, ".current", this.targetCount);
-
-          const channelListSelector = ".sheet .chart__row";
-          const channelListElements = await this.findElements(
-            channelListSelector
-          );
-
-          for (const channelElement of channelListElements) {
-            const adsElement = await this.findChildElement(
-              channelElement,
-              " .ad__slot"
+            const channelListSelector = ".sheet .chart__row";
+            const channelListElements = await this.findElements(
+              channelListSelector
             );
 
-            if (adsElement) continue;
+            for (const channelElement of channelListElements) {
+              const adsElement = await this.findChildElement(
+                channelElement,
+                " .ad__slot"
+              );
 
-            const idElement = await this.findChildElement(
-              channelElement,
-              " td > a"
-            );
-            const channelIconElement = await this.findChildElement(
-              channelElement,
-              " .lazy-image img"
-            );
-            const channelNameElement = await this.findChildElement(
-              channelElement,
-              " .name > a > h3"
-            );
-            const channelCategoryElement = await this.findChildElements(
-              channelElement,
-              " .name li > a"
-            );
-            const scoreElements = await this.findChildElement(
-              channelElement,
-              " .score"
-            );
-            const dailyNewSubscribersElement = await this.findChildElement(
-              channelElement,
-              " .score > span"
-            );
+              if (adsElement) continue;
 
-            const id = await this.getElementAttribute(idElement, "href");
+              const idElement = await this.findChildElement(
+                channelElement,
+                " td > a"
+              );
+              const channelIconElement = await this.findChildElement(
+                channelElement,
+                " .lazy-image img"
+              );
+              const channelNameElement = await this.findChildElement(
+                channelElement,
+                " .name > a > h3"
+              );
+              const channelCategoryElement = await this.findChildElements(
+                channelElement,
+                " .name li > a"
+              );
+              const scoreElements = await this.findChildElement(
+                channelElement,
+                " .score"
+              );
+              const dailyNewSubscribersElement = await this.findChildElement(
+                channelElement,
+                " .score > span"
+              );
 
-            const channelIcon = await this.getElementAttribute(
-              channelIconElement,
-              "src"
-            );
+              const id = await this.getElementAttribute(idElement, "href");
 
-            const channelName = await this.getElementText(channelNameElement);
-            const channelCategory = await this.getElementsText(
-              channelCategoryElement
-            );
-            const cumulativeSubscribers = await this.getElementText(
-              scoreElements
-            );
+              const channelIcon = await this.getElementAttribute(
+                channelIconElement,
+                "src"
+              );
 
-            const dailyNewSubscribers = await this.getElementText(
-              dailyNewSubscribersElement
-            );
+              const channelName = await this.getElementText(channelNameElement);
+              const channelCategory = await this.getElementsText(
+                channelCategoryElement
+              );
+              const cumulativeSubscribers = await this.getElementText(
+                scoreElements
+              );
 
-            const channelId = id?.split("/")[4] ?? "";
-            console.log("channelId", channelId);
-            console.log("channel", id);
+              const dailyNewSubscribers = await this.getElementText(
+                dailyNewSubscribersElement
+              );
 
-            const channel = {
-              channelId: channelId,
-              channelIconUrl: channelIcon ?? "",
-              channelName: channelName ?? "",
-              channelTags: channelCategory.join(",") ?? "",
-              cumulativeViewers: NumberNormalizer.normalizeInteger(
-                cumulativeSubscribers
-              ),
-              dailyViewerCount:
-                NumberNormalizer.normalizeInteger(dailyNewSubscribers),
-              service: Service.PLAYBOARD_CO,
-              channelCategory: category,
-              date: new Date(Number(crawledDate) * 1000),
-            };
+              const channelId = id?.split("/")[4] ?? "";
+              console.log("channelId", channelId);
+              console.log("channel", id);
 
-            await prisma.channel.upsert({
-              where: {
-                channelId_date: {
-                  channelId: channelId,
-                  date: channel.date,
+              const channel = {
+                channelId: channelId,
+                channelIconUrl: channelIcon ?? "",
+                channelName: channelName ?? "",
+                channelTags: channelCategory.join(",") ?? "",
+                cumulativeViewers: NumberNormalizer.normalizeInteger(
+                  cumulativeSubscribers
+                ),
+                dailyViewerCount:
+                  NumberNormalizer.normalizeInteger(dailyNewSubscribers),
+                service: Service.PLAYBOARD_CO,
+                channelCategory: category,
+                date: new Date(Number(crawledDate) * 1000),
+              };
+
+              await prisma.channel.upsert({
+                where: {
+                  channelId_date: {
+                    channelId: channelId,
+                    date: channel.date,
+                  },
                 },
-              },
-              update: channel,
-              create: channel,
-            });
+                update: channel,
+                create: channel,
+              });
 
-            this.crawledCount++;
+              this.crawledCount++;
+            }
+            console.log(
+              `Crawled ${this.crawledCount} channels, waiting 120 seconds`
+            );
+            await new Promise((resolve) => setTimeout(resolve, 120000));
+          } catch (error) {
+            console.error(`Error processing row ${index}:`, error);
+
+            // If we encounter an error, try to recover
+            console.log("Attempting to recover from error...");
+            await this.wait(10000);
+
+            // Re-navigate to the page
+            await this.navigateToPage(this.pageUrl);
+
+            // Re-find all elements
+            rowsElements = await this.findElements(rowSelector);
+            if (rowsElements.length > this.targetCount) {
+              rowsElements = rowsElements.slice(0, this.targetCount);
+            }
+
+            // Decrease index to retry the current row
+            index = Math.max(0, index - 1);
+            continue;
           }
-          console.log(
-            `Crawled ${this.crawledCount} channels, waiting 60 seconds`
-          );
-          await new Promise((resolve) => setTimeout(resolve, 60000));
-          crawledDate = (Number(crawledDate) + 86400).toString();
         }
 
-        await this.closeBrowser();
-        this.isFinished = true;
-        this.isRunning = false;
-        return channelList;
+        if (crawledDate > this.targetDate) {
+          break;
+        }
+
+        //add 1 day to crawledDate
+        crawledDate = (Number(crawledDate) + 86400).toString();
       }
+
+      await this.closeBrowser();
+      this.isFinished = true;
+      this.isRunning = false;
     } catch (error) {
       console.error("Scraping failed:", error);
       this.isRunning = false;
