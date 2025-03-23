@@ -12,5 +12,7 @@
     "strict": true,
     "noImplicitAny": true,
     "skipLibCheck": true
-  }
+  },
+  "include": ["src/**/*", "puppeteer.config.cjs"],
+  "exclude": ["node_modules", "build", "puppeteer.config.cjs"]
 }
