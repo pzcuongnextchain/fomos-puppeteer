@@ -8,7 +8,7 @@ export class GetLiveViewersPuppeteerStatistic extends BaseScraperService {
   private readonly loginUrl: string = "https://playboard.co/en/account/signin";
   private readonly targetCount: number = 100;
   private readonly targetDate: string = "1742515200";
-  private readonly initialDate: string = "1735732800";
+  private readonly initialDate: string = "1740830400";
 
   constructor() {
     super();
