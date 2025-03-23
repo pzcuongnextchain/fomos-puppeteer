@@ -70,6 +70,7 @@ export abstract class BaseScraperService {
 
       this.page = await this.browser!.newPage();
       await this.page.setViewport({ width: 1920, height: 1080 });
+      await this.page.setDefaultNavigationTimeout(90000);
     } catch (error) {
       console.error("Failed to launch browser:", error);
       throw error;
