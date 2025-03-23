@@ -54,6 +54,7 @@ export abstract class BaseScraperService {
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
           ],
+          timeout: 0,
         })) as unknown as Browser;
       } else {
         this.browser = (await puppeteer.launch({
@@ -63,6 +64,7 @@ export abstract class BaseScraperService {
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
           ],
+          timeout: 0,
         })) as unknown as Browser;
       }
 

@@ -33,9 +33,12 @@ export class GetBoradcastPuppeteerStatistic extends BaseScraperService {
     });
 
     try {
+      console.log("open browser");
       await this.openBrowser();
+      console.log("open browser success");
 
       await this.login();
+      console.log("login success");
       await this.wait(5000);
 
       this.isRunning = true;
