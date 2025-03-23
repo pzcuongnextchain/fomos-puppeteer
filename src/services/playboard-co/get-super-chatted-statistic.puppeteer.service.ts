@@ -71,7 +71,7 @@ export class GetSuperChattedPuppeteerStatistic extends BaseScraperService {
         await this.navigateToPage(this.pageUrl);
 
         //change currency to krw
-        await this.clickElement(await this.findFirstElement(`.menu__picture`));
+        await this.clickElement(await this.findFirstElement(`.more-btn`));
         await this.clickElement(
           await this.findFirstElement(`.label--icon-currency`)
         );
