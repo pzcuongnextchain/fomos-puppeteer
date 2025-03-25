@@ -34,16 +34,10 @@ export abstract class BaseScraperService {
   protected readonly isHeadless: boolean =
     process.env.IS_HEADLESS == null ? true : process.env.IS_HEADLESS === "true";
 
-  public getCurrentStatus(): ScraperStatus {
-    return {
-      isRunning: this.isRunning,
-      isFinished: this.isFinished,
-      currentPageNo: this.currentPageNo,
-      totalPages: this.totalPages,
-    };
-  }
-
-  protected async openBrowser(): Promise<void> {
+  protected async openBrowser(options?: {
+    userAgent?: string;
+    cookies?: Array<{ name: string; value: string; domain: string }>;
+  }): Promise<void> {
     try {
       if (process.env.CHROME_BIN) {
         this.browser = (await puppeteerExtra.launch({
@@ -55,6 +49,7 @@ export abstract class BaseScraperService {
             "--disable-dev-shm-usage",
           ],
           timeout: 0,
+          protocolTimeout: 240000,
         })) as unknown as Browser;
       } else {
         this.browser = (await puppeteer.launch({
@@ -69,16 +64,17 @@ export abstract class BaseScraperService {
       }
 
       this.page = await this.browser!.newPage();
-      await this.page.setViewport({ width: 1920, height: 1080 });
-      await this.page.setDefaultNavigationTimeout(180000);
+
+      console.log("==============options", options);
+
+      if (options?.userAgent) await this.page?.setUserAgent(options.userAgent);
+      if (options?.cookies) await this.page?.setCookie(...options.cookies);
+
+      await this.configurePage();
     } catch (error) {
       console.error("Failed to launch browser:", error);
       throw error;
     }
-  }
-
-  async wait(milliseconds: number) {
-    return new Promise((resolve) => setTimeout(resolve, milliseconds));
   }
 
   protected async configurePage(options?: {
@@ -99,6 +95,10 @@ export abstract class BaseScraperService {
 
     await this.page.setDefaultNavigationTimeout(options?.timeout || 90000);
     await this.page.setJavaScriptEnabled(options?.jsEnabled ?? true);
+  }
+
+  async wait(milliseconds: number) {
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
   }
 
   protected async closeBrowser(): Promise<void> {

@@ -38,6 +38,8 @@ model Channel {
   updatedAt                 DateTime  @updatedAt
   date                      DateTime?
   cumulativeSuperChat       BigInt?
+  dailyBroadcastCount       Float?
+  dailyAverageViewerCount   Float?
 
   @@unique([channelId, date])
 }

@@ -1,0 +1,19 @@
+{
+  "name": "webview-electron-puppeteer",
+  "version": "1.0.0",
+  "description": "Electron app with webview controlled by Puppeteer to extract cookies",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "puppeteer": "node puppeteer-controller.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^28.0.0",
+    "puppeteer": "^21.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.42.1"
+  }
+}

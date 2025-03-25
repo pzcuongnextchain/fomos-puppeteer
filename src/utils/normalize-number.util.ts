@@ -53,4 +53,18 @@ export class NumberNormalizer {
     if (result === null) return options.defaultValue ?? 0;
     return Math.floor(result);
   }
+
+  public static normalizeFloat(
+    text: string | null | undefined,
+    options: {
+      defaultValue?: number;
+      removeNonNumeric?: boolean;
+      decimalSeparator?: string;
+      thousandsSeparator?: string;
+    } = {}
+  ): number {
+    const result = this.normalize(text, options);
+    if (result === null) return options.defaultValue ?? 0;
+    return result;
+  }
 }

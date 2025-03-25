@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Viewership Scraper</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #000;
+      }
+      #clearButton {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 9999;
+        background: #ff4444;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      #clearButton:hover {
+        background: #cc0000;
+      }
+      #scrapeButton {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 9999;
+        background: #4444ff;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      #scrapeButton:hover {
+        background: #0000cc;
+      }
+      #cookieButton {
+        position: fixed;
+        top: 10px;
+        left: 150px;
+        z-index: 9999;
+        background: #44aa44;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      #cookieButton:hover {
+        background: #008800;
+      }
+      #contentOutput {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px;
+        max-height: 200px;
+        overflow-y: auto;
+        font-family: monospace;
+        z-index: 9999;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="clearButton">Clear Cookies</button>
+    <button id="scrapeButton">Scrape Content</button>
+    <button id="cookieButton">Get Cookie</button>
+    <div id="contentOutput"></div>
+    <webview
+      id="myWebview"
+      src="https://viewership.softc.one/"
+      useragent="Mozilla/5.0 (Linux; Android 14; MI PAD 4 Build/AP2A.240805.005; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/127.0.6533.103 Safari/537.36"
+      style="width: 400px; height: 800px"
+    ></webview>
+    <script>
+      const { ipcRenderer } = require("electron");
+      const webview = document.querySelector("webview");
+      const clearButton = document.getElementById("clearButton");
+      const cookieButton = document.getElementById("cookieButton");
+      const contentOutput = document.getElementById("contentOutput");
+
+      // Set mobile-specific attributes
+      webview.setAttribute(
+        "webpreferences",
+        "enableWebView=true,defaultViewport={width:400,height:800,deviceScaleFactor:2,isMobile:true,hasTouch:true}"
+      );
+
+      // Inject mobile-specific CSS when the page loads
+      webview.addEventListener("dom-ready", () => {
+        webview.insertCSS(`
+                body {
+                    max-width: 400px;
+                    margin: 0 auto;
+                    -webkit-text-size-adjust: 100%;
+                }
+                * {
+                    -webkit-tap-highlight-color: transparent;
+                }
+            `);
+
+        // Notify the main process that the page has loaded
+        ipcRenderer.send("webview-loaded");
+      });
+
+      // Function to display results
+      function displayResults(results) {
+        if (typeof results === "string") {
+          contentOutput.innerText = results;
+        } else {
+          contentOutput.innerText = JSON.stringify(results, null, 2);
+        }
+      }
+
+      // Handle clear cookies button click
+      clearButton.addEventListener("click", () => {
+        ipcRenderer.send("clear-cookies");
+      });
+
+      // Handle cookie button click
+      cookieButton.addEventListener("click", () => {
+        webview.send("request-cookie");
+      });
+
+      // Listen for reload message from main process
+      ipcRenderer.on("reload-webview", () => {
+        // Force a complete reload of the WebView
+        webview.src = webview.src;
+      });
+
+      // Listen for cookie request from main process
+      ipcRenderer.on("get-cookie", () => {
+        webview.send("request-cookie");
+      });
+
+      // Listen for scraped content from the webview
+      webview.addEventListener("ipc-message", (event) => {
+        if (event.channel === "cookie-extracted") {
+          displayResults(`Cookie: ${JSON.stringify(event.args[0])}`);
+          ipcRenderer.send("cookie-extracted", event.args[0]);
+        }
+      });
+    </script>
+  </body>
+</html>

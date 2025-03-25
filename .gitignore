@@ -23,3 +23,5 @@ lerna-debug.log*
 # Prisma
 /prisma/migrations
 /prisma/dev.db
+
+.cache

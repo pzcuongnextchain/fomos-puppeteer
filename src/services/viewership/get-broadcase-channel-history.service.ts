@@ -1,14 +1,18 @@
-import { BaseScraperService } from "../base.scraper.service";
+import { Service } from "@prisma/client";
+import { prisma } from "../../libs/prisma.libs";
 import { NumberNormalizer } from "../../utils/normalize-number.util";
+import { BaseScraperService } from "../base.scraper.service";
+import { PuppeteerWebViewController } from "../puppeteer.webview.controller";
 export class ViewerShipService extends BaseScraperService {
-  private readonly pageUrl: string =
-    "https://viewership.softc.one/channel/naverchzzk/75cbf189b3bb8f9f687d2aca0d0a382b";
-  private readonly targetCount: number = 1000;
+  private readonly basePageUrl: string =
+    "https://viewership.softc.one/ranking/streamer?type=naverchzzk&date=yesterday";
+  private readonly targetCount: number = 300;
 
   constructor() {
     super();
-
     this.crawledCount = 0;
+    this.totalPages = 0;
+    this.currentPageNo = 1;
   }
 
   public async startScraping(): Promise<
@@ -16,11 +20,9 @@ export class ViewerShipService extends BaseScraperService {
       id: string;
       channelIconUrl: string;
       channelName: string;
-      channelCategory: string;
-      dailyReceivedStarBalloons: number;
-      hourlyStarBalloonRate: number;
+      dailyBroadcastCount: number;
       dailyViewerCount: number;
-      dailyStarBalloonGifts: number;
+      dailyAverageViewerCount: number;
     }>
   > {
     if (this.isRunning) throw new Error("Scraper is already running");
@@ -30,82 +32,122 @@ export class ViewerShipService extends BaseScraperService {
         id: string;
         channelIconUrl: string;
         channelName: string;
-        channelCategory: string;
-        dailyReceivedStarBalloons: number;
-        hourlyStarBalloonRate: number;
+        dailyBroadcastCount: number;
         dailyViewerCount: number;
-        dailyStarBalloonGifts: number;
+        dailyAverageViewerCount: number;
       }> = [];
 
-      await this.openBrowser();
+      const puppeteerController = new PuppeteerWebViewController();
+      const cookie = await puppeteerController.launchAndGetCookie();
+
+      await this.openBrowser({
+        userAgent:
+          "Mozilla/5.0 (Linux; Android 14; MI PAD 4 Build/AP2A.240805.005; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/127.0.6533.103 Safari/537.36",
+        cookies: [
+          {
+            name: "_vcrcs",
+            value: cookie!,
+            domain: "viewership.softc.one",
+          },
+          {
+            name: "webview",
+            value: JSON.stringify({ platform: "android" }),
+            domain: "viewership.softc.one",
+          },
+        ],
+      });
+
       this.isRunning = true;
-      await this.navigateToPage(this.pageUrl);
 
-      await this.loadAllUntilCount(
-        ".bbs-btn-more",
-        ".body .rank",
-        this.targetCount
-      );
+      // Continue scraping until we reach the target count or there are no more items
+      while (this.crawledCount < this.targetCount) {
+        const pageUrl = `${this.basePageUrl}&page=${this.currentPageNo}`;
+        await this.navigateToPage(pageUrl);
 
-      const rowSelector = ".bbs-body .body .row";
-      const rowsElements = await this.findElements(rowSelector);
-      for (const rowElement of rowsElements) {
-        const idElement = await this.findChildElement(rowElement, " .post");
-        const channelIconElement = await this.findChildElement(
-          rowElement,
-          " .thumnail > img"
-        );
-        const channelNameElement = await this.findChildElement(
-          rowElement,
-          " .nick"
-        );
-        const channelCategoryElement = await this.findChildElement(
-          rowElement,
-          " .category"
-        );
-        const statisticElements = await this.findChildElements(
-          rowElement,
-          " .col"
-        );
+        const rowSelector = `[class~="md:py-2"] > div > div > a`;
+        const rowsElements = await this.findElements(rowSelector);
 
-        const id = await this.getElementAttribute(idElement, "href");
-        const channelIcon = await this.getElementAttribute(
-          channelIconElement,
-          "src"
-        );
+        // If no rows found, we've reached the end of pagination
+        if (rowsElements.length === 0) {
+          break;
+        }
 
-        const channelName = await this.getElementText(channelNameElement);
-        const channelCategory = await this.getElementText(
-          channelCategoryElement
-        );
+        for (const rowElement of rowsElements) {
+          const id = await this.getElementAttribute(rowElement, "href");
+          const channelIconElement = await this.findChildElement(
+            rowElement,
+            " img"
+          );
+          const dailyBroadcastCountElement = await this.findChildElement(
+            rowElement,
+            " div:nth-child(4) > span:nth-child(1)"
+          );
+          const dailyViewerCountElement = await this.findChildElement(
+            rowElement,
+            " div:nth-child(5) > span:nth-child(1)"
+          );
+          const dailyAverageViewerCountElement = await this.findChildElement(
+            rowElement,
+            " div:nth-child(6) > span:nth-child(1)"
+          );
 
-        const [
-          dailyReceivedStarBalloons,
-          hourlyStarBalloonRate,
-          dailyViewerCount,
-          dailyStarBalloonGifts,
-        ] = await this.getElementsText(statisticElements);
+          const channelIcon = await this.getElementAttribute(
+            channelIconElement,
+            "src"
+          );
 
-        const channel = {
-          id: id?.split("/")[4] ?? "",
-          channelIconUrl: channelIcon ?? "",
-          channelName: channelName ?? "",
-          channelCategory: channelCategory ?? "",
-          dailyReceivedStarBalloons: NumberNormalizer.normalizeInteger(
-            dailyReceivedStarBalloons
-          ),
-          hourlyStarBalloonRate: NumberNormalizer.normalizeInteger(
-            hourlyStarBalloonRate
-          ),
-          dailyViewerCount: NumberNormalizer.normalizeInteger(dailyViewerCount),
-          dailyStarBalloonGifts: NumberNormalizer.normalizeInteger(
-            dailyStarBalloonGifts
-          ),
-        };
+          const channelName = await this.getElementAttribute(
+            channelIconElement,
+            "alt"
+          );
+          const dailyBroadcastCount = await this.getElementText(
+            dailyBroadcastCountElement
+          );
+          const dailyViewerCount = await this.getElementText(
+            dailyViewerCountElement
+          );
+          const dailyAverageViewerCount = await this.getElementText(
+            dailyAverageViewerCountElement
+          );
 
-        channelList.push(channel);
-        this.crawledCount++;
+          const channel = {
+            service: Service.VIEWERSHIP,
+            channelId: id?.split("/")[5] ?? "",
+            channelIconUrl: channelIcon ?? "",
+            channelName: channelName ?? "",
+            dailyBroadcastCount:
+              NumberNormalizer.normalizeFloat(dailyBroadcastCount),
+            dailyViewerCount:
+              NumberNormalizer.normalizeInteger(dailyViewerCount),
+            dailyAverageViewerCount: NumberNormalizer.normalizeInteger(
+              dailyAverageViewerCount
+            ),
+            date: new Date(new Date().setDate(new Date().getDate() - 1)),
+          };
+
+          await prisma.channel.upsert({
+            where: {
+              channelId_date: {
+                channelId: channel.channelId,
+                date: channel.date,
+              },
+            },
+            update: channel,
+            create: channel,
+          });
+
+          this.crawledCount++;
+
+          // Stop if we've reached the target count
+          if (this.crawledCount >= this.targetCount) {
+            break;
+          }
+        }
+
+        // Move to the next page
+        this.currentPageNo++;
       }
+
       await this.closeBrowser();
       this.isFinished = true;
       this.isRunning = false;

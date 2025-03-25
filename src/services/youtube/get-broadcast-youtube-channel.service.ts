@@ -7,22 +7,7 @@ export class GetBroadcastYoutubeChannel {
     "https://www.googleapis.com/youtube/v3/search";
   private isRunning: boolean = false;
 
-  public async startScraping(): Promise<
-    Array<{
-      id: string;
-      name: string;
-      items: Array<{
-        id: string;
-        cumulativeViews: number;
-        cumulativeSubscribers: number;
-        numberOfUploadedVideos: number;
-        channelCreationDate: string;
-        channelName: string;
-        channelDescription: string;
-        channelCustomURL: string;
-      }>;
-    }>
-  > {
+  public async startScraping() {
     if (this.isRunning) throw new Error("Scraper is already running");
 
     await prisma.serviceCrawl.upsert({
@@ -56,137 +41,104 @@ export class GetBroadcastYoutubeChannel {
 
       this.isRunning = true;
 
-      // 1. Get video categories
-      const categoriesResponse = await axios.get(
-        "https://www.googleapis.com/youtube/v3/videoCategories",
-        {
-          params: {
-            part: "snippet",
-            regionCode: "KR",
-            key: process.env.YOUTUBE_API_KEY,
-            hl: "ko_KR",
-          },
+      // We'll use cursor-based pagination to process all channels
+      let lastChannelId: string | undefined = undefined;
+      let hasMoreChannels = true;
+
+      // YouTube API allows up to 50 IDs per request
+      const BATCH_SIZE = 25;
+
+      while (hasMoreChannels) {
+        // Get the next batch of channels using cursor pagination
+        const channels: Array<{ channelId: string }> =
+          await prisma.channel.findMany({
+            where: {
+              service: Service.PLAYBOARD_CO,
+              ...(lastChannelId ? { channelId: { gt: lastChannelId } } : {}),
+            },
+            orderBy: {
+              channelId: "asc",
+            },
+            take: BATCH_SIZE,
+            distinct: ["channelId"],
+          });
+
+        if (channels.length === 0) {
+          hasMoreChannels = false;
+          break;
         }
-      );
 
-      // Get top 5 categories
-      // const topCategories = categoriesResponse.data.items.slice(0, 5);
-      const topCategories = categoriesResponse.data.items;
-      for (const category of topCategories) {
-        const categoryId = category.id;
-        const categoryName = category.snippet.title;
+        // Update the cursor to the last channel ID in this batch
+        lastChannelId = channels[channels.length - 1].channelId;
 
-        // 2. Search videos by category
-        const videosResponse = await axios.get(
-          "https://www.googleapis.com/youtube/v3/search",
+        // Create a comma-separated string of channel IDs for the API request
+        const channelIds = channels
+          .filter((channel) => channel.channelId)
+          .map((channel) => channel.channelId)
+          .join(",");
+
+        // Make a single API call for this batch
+        const channelResponse = await axios.get(
+          "https://www.googleapis.com/youtube/v3/channels",
           {
             params: {
-              part: "snippet",
-              eventType: "live",
-              type: "video",
-              videoCategoryId: categoryId,
-              regionCode: "KR",
-              maxResults: 100,
+              part: "statistics,snippet",
+              id: channelIds,
               key: process.env.YOUTUBE_API_KEY,
             },
           }
         );
 
-        // Extract unique channel IDs from the video search results
-        const channelIds = [
-          ...new Set(
-            videosResponse.data.items.map((item: any) => item.snippet.channelId)
-          ),
-        ];
+        if (
+          channelResponse.data.items &&
+          channelResponse.data.items.length > 0
+        ) {
+          // Create a map for faster lookup of channel data
+          const channelDataMap = new Map();
+          channelResponse.data.items.forEach((item: any) => {
+            channelDataMap.set(item.id, item);
+          });
 
-        const categoryChannels: {
-          id: string;
-          name: string;
-          items: Array<{
-            id: string;
-            cumulativeViews: number;
-            cumulativeSubscribers: number;
-            numberOfUploadedVideos: number;
-            channelCreationDate: string;
-            channelName: string;
-            channelDescription: string;
-            channelCustomURL: string;
-          }>;
-        } = {
-          id: categoryId,
-          name: categoryName,
-          items: [],
-        };
+          // Process updates sequentially instead of in parallel
+          for (const channel of channels) {
+            const channelData = channelDataMap.get(channel.channelId);
 
-        // 3. Get channel statistics for each channel
-        for (const channelId of channelIds) {
-          const channelResponse = await axios.get(
-            "https://www.googleapis.com/youtube/v3/channels",
-            {
-              params: {
-                part: "statistics,snippet",
-                id: channelId,
-                key: process.env.YOUTUBE_API_KEY,
-              },
-            }
-          );
+            if (!channelData) continue; // Skip if no data returned for this channel
 
-          if (
-            channelResponse.data.items &&
-            channelResponse.data.items.length > 0
-          ) {
-            const channelData = channelResponse.data.items[0];
-
-            const channel = {
-              channelId: channelId as string,
-              cumulativeViewers: parseInt(channelData.statistics.viewCount, 10),
-              cumulativeSubscribers: parseInt(
-                channelData.statistics.subscriberCount,
-                10
+            const updateChannel = {
+              channelId: channel.channelId as string,
+              cumulativeViewers: BigInt(channelData.statistics.viewCount || 0),
+              cumulativeSubscribers: BigInt(
+                channelData.statistics.subscriberCount || 0
               ),
-              numberOfUploadedVideos: parseInt(
-                channelData.statistics.videoCount,
-                10
+              numberOfUploadedVideos: BigInt(
+                channelData.statistics.videoCount || 0
               ),
-              creationDate: channelData?.snippet?.publishedAt as string,
-              channelName: channelData?.snippet?.title as string,
-              channelDescription: channelData?.snippet?.description as string,
-              channelCustomURL: channelData?.snippet?.customUrl as string,
-              channelCategory: categoryName,
+              creationDate: channelData?.snippet?.publishedAt
+                ? new Date(channelData.snippet.publishedAt)
+                : null,
+              channelName: channelData?.snippet?.title || null,
+              channelDescription: channelData?.snippet?.description || null,
+              channelCustomURL: channelData?.snippet?.customUrl || null,
               service: Service.YOUTUBE,
             };
 
-            categoryChannels.items.push({
-              id: channel.channelId as string,
-              cumulativeViews: channel.cumulativeViewers,
-              cumulativeSubscribers: channel.cumulativeSubscribers,
-              numberOfUploadedVideos: channel.numberOfUploadedVideos,
-              channelCreationDate: channel.creationDate,
-              channelName: channel.channelName,
-              channelDescription: channel.channelDescription,
-              channelCustomURL: channel.channelCustomURL,
-            });
-
-            console.log("channel", channel);
-
-            await prisma.channel.upsert({
+            // Process one update at a time
+            await prisma.channel.updateMany({
               where: {
-                channelId_date: {
-                  channelId: channel.channelId as string,
-                  date: new Date(),
-                },
+                channelId: channel.channelId as string,
               },
-              update: channel,
-              create: channel,
+              data: updateChannel,
             });
           }
         }
 
-        channelList.push(categoryChannels);
+        // Optional: Add a small delay between batches
+        console.log("Waiting for 1 second");
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
       this.isRunning = false;
-
       return channelList;
     } catch (error) {
       this.isRunning = false;
