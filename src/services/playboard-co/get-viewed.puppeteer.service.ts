@@ -8,8 +8,9 @@ export class GetViewedPuppeteerStatistic extends BaseScraperService {
     "https://playboard.co/en/youtube-ranking/most-viewed-all-channels-in-south-korea-daily";
   private readonly loginUrl: string = "https://playboard.co/en/account/signin";
   private readonly targetCount: number = 100;
-  private readonly targetDate: string = "1742515200";
-  private readonly initialDate: string = "1742533200";
+  // private readonly targetDate: string = "1742515200";
+  // private readonly initialDate: string = "1742533200";
+  private readonly todayUnix: string = new Date().getTime().toString();
 
   constructor() {
     super();
@@ -42,7 +43,8 @@ export class GetViewedPuppeteerStatistic extends BaseScraperService {
       await this.wait(5000);
 
       this.isRunning = true;
-      let crawledDate = this.initialDate;
+      // let crawledDate = this.initialDate;
+      let crawledDate = this.todayUnix;
 
       // eslint-disable-next-line no-constant-condition
       while (true) {
@@ -83,10 +85,10 @@ export class GetViewedPuppeteerStatistic extends BaseScraperService {
             console.log("currentPageUrl", currentPageUrl);
 
             if (!currentPageUrl?.includes(crawledDate)) {
-              const pageUrlWithDate = currentPageUrl + `?period=${crawledDate}`;
-              await this.navigateToPage(pageUrlWithDate);
+              // const pageUrlWithDate = currentPageUrl + `?period=${crawledDate}`;
+              await this.navigateToPage(currentPageUrl!);
 
-              console.log("navigate to page", pageUrlWithDate);
+              console.log("navigate to page", currentPageUrl);
 
               // Add delay for manual CAPTCHA resolution if needed
               await this.wait(5000);
@@ -178,7 +180,7 @@ export class GetViewedPuppeteerStatistic extends BaseScraperService {
                   NumberNormalizer.normalizeInteger(cumulativeViewers),
                 service: Service.PLAYBOARD_CO,
                 channelCategory: category,
-                date: new Date(Number(crawledDate) * 1000),
+                date: new Date(Number(crawledDate)),
               };
 
               await prisma.channel.upsert({
@@ -220,17 +222,13 @@ export class GetViewedPuppeteerStatistic extends BaseScraperService {
           }
         }
 
-        if (crawledDate > this.targetDate) {
-          break;
-        }
+        // if (crawledDate > this.targetDate) {
+        //   break;
+        // }
 
         //add 1 day to crawledDate
         crawledDate = (Number(crawledDate) + 86400).toString();
       }
-
-      await this.closeBrowser();
-      this.isFinished = true;
-      this.isRunning = false;
     } catch (error) {
       console.error("Scraping failed:", error);
       this.isRunning = false;

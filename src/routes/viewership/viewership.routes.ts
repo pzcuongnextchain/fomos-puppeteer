@@ -33,9 +33,7 @@ export class ViewershipRouter {
 
   private async getDailySubscribe(req: Request, res: Response) {
     try {
-      const result = await this.dailySubscribeScraperService.startScraping(
-        req.body.channelIds
-      );
+      const result = await this.dailySubscribeScraperService.startScraping();
       res.json(result);
     } catch (error) {
       console.error(error);

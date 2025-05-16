@@ -68,6 +68,7 @@ export class DailySubscribeViewerShipService extends BaseScraperService {
             cumulativeSubscribers: null,
           },
           select: {
+            id: true,
             channelId: true,
           },
           orderBy: {
@@ -116,7 +117,7 @@ export class DailySubscribeViewerShipService extends BaseScraperService {
               // Update the channel data in the database
               await prisma.channel.updateMany({
                 where: {
-                  channelId: channel.channelId,
+                  id: channel.id,
                 },
                 data: {
                   cumulativeSubscribers: subscribeCount,

@@ -63,11 +63,33 @@ export class GetBroadcaseChannelHistory {
         };
       }
 
+      const date = new Date();
+      const today = new Date();
+
       if (channelIds) {
+        const startOfDay = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate()
+        );
+        const endOfDay = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate(),
+          23,
+          59,
+          59,
+          999
+        );
+
         channels = await prisma.channel.findMany({
           where: {
             channelId: {
               in: channelIds,
+            },
+            date: {
+              gte: startOfDay,
+              lte: endOfDay,
             },
             ...nextIdWhere,
           },
@@ -153,7 +175,7 @@ export class GetBroadcaseChannelHistory {
 
             if (channel.channelId) {
               await prisma.channel.updateMany({
-                where: { channelId: channel.channelId },
+                where: { channelId: channel.channelId, date: today },
                 data: channel,
               });
 

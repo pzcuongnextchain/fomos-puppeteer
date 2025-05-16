@@ -65,8 +65,6 @@ export abstract class BaseScraperService {
 
       this.page = await this.browser!.newPage();
 
-      console.log("==============options", options);
-
       if (options?.userAgent) await this.page?.setUserAgent(options.userAgent);
       if (options?.cookies) await this.page?.setCookie(...options.cookies);
 
@@ -191,7 +189,7 @@ export abstract class BaseScraperService {
       });
     } catch (error) {
       console.log(error);
-      return "error";
+      return "";
     }
   }
 
@@ -222,7 +220,7 @@ export abstract class BaseScraperService {
       return value as string;
     } catch (error) {
       console.log(error);
-      return "error";
+      return "";
     }
   }
 

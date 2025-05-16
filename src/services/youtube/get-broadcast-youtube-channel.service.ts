@@ -55,6 +55,7 @@ export class GetBroadcastYoutubeChannel {
             where: {
               service: Service.PLAYBOARD_CO,
               ...(lastChannelId ? { channelId: { gt: lastChannelId } } : {}),
+              cumulativeViewers: null,
             },
             orderBy: {
               channelId: "asc",

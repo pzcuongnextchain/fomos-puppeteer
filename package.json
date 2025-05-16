@@ -11,16 +11,22 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate",
     "prisma:studio": "prisma studio",
-    "prisma:push": "prisma db push"
+    "prisma:push": "prisma db push",
+    "cron:start": "tsx src/scripts/cron-cli.ts start-all",
+    "cron:run": "tsx src/scripts/cron-cli.ts run",
+    "cron:run-all": "tsx src/scripts/cron-cli.ts run-all",
+    "cron:list": "tsx src/scripts/cron-cli.ts list"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^6.5.0",
+    "@types/node-cron": "^3.0.11",
     "axios": "^1.8.1",
     "dotenv": "^16.4.7",
     "electron": "^35.0.3",
     "express": "^4.20.0",
+    "node-cron": "^4.0.5",
     "prisma": "^6.5.0",
     "puppeteer": "^24.4.0",
     "puppeteer-core": "^21.5.2",
