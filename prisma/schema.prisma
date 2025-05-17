@@ -3,11 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
-model Channel {
+model NChannel {
   id                        Int       @id @default(autoincrement())
   channelId                 String    
   service                   Service   @default(PLAYBOARD_CO)
@@ -44,7 +44,7 @@ model Channel {
   @@unique([channelId, date])
 }
 
-model Category {
+model NCategory {
   id           Int      @id @default(autoincrement())
   categoryId   String   @unique
   categoryName String
@@ -52,7 +52,7 @@ model Category {
   updatedAt    DateTime @updatedAt
 }
 
-model ServiceCrawl {
+model NServiceCrawl {
   id            Int       @id @default(autoincrement())
   service       Service   @unique
   lastCrawledAt DateTime?
