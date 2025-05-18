@@ -10,7 +10,7 @@ export class GetBroadcastYoutubeChannel {
   public async startScraping() {
     if (this.isRunning) throw new Error("Scraper is already running");
 
-    await prisma.serviceCrawl.upsert({
+    await prisma.nServiceCrawl.upsert({
       where: {
         service: Service.YOUTUBE,
       },
@@ -51,7 +51,7 @@ export class GetBroadcastYoutubeChannel {
       while (hasMoreChannels) {
         // Get the next batch of channels using cursor pagination
         const channels: Array<{ channelId: string }> =
-          await prisma.channel.findMany({
+          await prisma.nChannel.findMany({
             where: {
               service: Service.PLAYBOARD_CO,
               ...(lastChannelId ? { channelId: { gt: lastChannelId } } : {}),
@@ -125,7 +125,7 @@ export class GetBroadcastYoutubeChannel {
             };
 
             // Process one update at a time
-            await prisma.channel.updateMany({
+            await prisma.nChannel.updateMany({
               where: {
                 channelId: channel.channelId as string,
               },

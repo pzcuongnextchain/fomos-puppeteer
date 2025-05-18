@@ -20,7 +20,7 @@ export class GetBoradcastPuppeteerStatistic extends BaseScraperService {
   public async startScraping() {
     if (this.isRunning) throw new Error("Scraper is already running");
 
-    await prisma.serviceCrawl.upsert({
+    await prisma.nServiceCrawl.upsert({
       where: {
         service: Service.PLAYBOARD_CO,
       },
@@ -198,7 +198,7 @@ export class GetBoradcastPuppeteerStatistic extends BaseScraperService {
                 date: new Date(Number(crawledDate)),
               };
 
-              await prisma.channel.upsert({
+              await prisma.nChannel.upsert({
                 where: {
                   channelId_date: {
                     channelId: channelId,

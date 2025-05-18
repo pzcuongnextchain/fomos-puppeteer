@@ -57,12 +57,11 @@ export class DailySubscribeViewerShipService extends BaseScraperService {
       while (hasMoreRecords) {
         // Get channels in paginated batches
         console.log(
-          `Fetching channels from ${currentSkip} to ${
-            currentSkip + this.queryLimit
+          `Fetching channels from ${currentSkip} to ${currentSkip + this.queryLimit
           }`
         );
 
-        const channelIds = await prisma.channel.findMany({
+        const channelIds = await prisma.nChannel.findMany({
           where: {
             service: Service.VIEWERSHIP,
             cumulativeSubscribers: null,
@@ -115,7 +114,7 @@ export class DailySubscribeViewerShipService extends BaseScraperService {
                 NumberNormalizer.normalizeInteger(subscribeCountText);
 
               // Update the channel data in the database
-              await prisma.channel.updateMany({
+              await prisma.nChannel.updateMany({
                 where: {
                   id: channel.id,
                 },

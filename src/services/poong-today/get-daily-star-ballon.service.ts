@@ -16,7 +16,7 @@ export class GetDailyStarBallon extends BaseScraperService {
   public async startScraping(): Promise<void> {
     if (this.isRunning) throw new Error("Scraper is already running");
 
-    await prisma.serviceCrawl.upsert({
+    await prisma.nServiceCrawl.upsert({
       where: {
         service: Service.POONG_TODAY,
       },
@@ -135,7 +135,7 @@ export class GetDailyStarBallon extends BaseScraperService {
 
         try {
           if (channel.channelId) {
-            await prisma.channel.upsert({
+            await prisma.nChannel.upsert({
               where: {
                 channelId_date: {
                   channelId: channel.channelId,

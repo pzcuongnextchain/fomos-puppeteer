@@ -27,7 +27,7 @@ export class GetBroadcaseChannelHistory {
 
     const failedChannels: Array<string> = [];
 
-    await prisma.serviceCrawl.upsert({
+    await prisma.nServiceCrawl.upsert({
       where: {
         service: Service.POONG_TODAY,
       },
@@ -82,7 +82,7 @@ export class GetBroadcaseChannelHistory {
           999
         );
 
-        channels = await prisma.channel.findMany({
+        channels = await prisma.nChannel.findMany({
           where: {
             channelId: {
               in: channelIds,
@@ -100,7 +100,7 @@ export class GetBroadcaseChannelHistory {
           take: 500,
         });
       } else {
-        channels = await prisma.channel.findMany({
+        channels = await prisma.nChannel.findMany({
           where: {
             service: Service.POONG_TODAY,
             creationDate: null,
@@ -174,7 +174,7 @@ export class GetBroadcaseChannelHistory {
             };
 
             if (channel.channelId) {
-              await prisma.channel.updateMany({
+              await prisma.nChannel.updateMany({
                 where: { channelId: channel.channelId, date: today },
                 data: channel,
               });

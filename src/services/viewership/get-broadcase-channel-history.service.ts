@@ -3,6 +3,7 @@ import { prisma } from "../../libs/prisma.libs";
 import { NumberNormalizer } from "../../utils/normalize-number.util";
 import { BaseScraperService } from "../base.scraper.service";
 import { PuppeteerWebViewController } from "../puppeteer.webview.controller";
+
 export class ViewerShipService extends BaseScraperService {
   private readonly basePageUrl: string =
     "https://viewership.softc.one/ranking/streamer?type=naverchzzk&date=yesterday";
@@ -125,7 +126,7 @@ export class ViewerShipService extends BaseScraperService {
             date: new Date(new Date().setDate(new Date().getDate() - 1)),
           };
 
-          await prisma.channel.upsert({
+          await prisma.nChannel.upsert({
             where: {
               channelId_date: {
                 channelId: channel.channelId,
