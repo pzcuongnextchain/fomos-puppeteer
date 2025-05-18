@@ -36,92 +36,165 @@ export class CronService {
   startCronJobs(): void {
     console.log("Starting cron jobs...");
 
-    // PoongToday daily service - every 3 hours
-    cron.schedule("0 */3 * * *", async () => {
-      console.log(`Running PoongToday at ${new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })}`);
-      try {
-        await this.poongTodayDailyService.startScraping();
-        console.log("Finished PoongToday daily star balloon service");
-      } catch (error) {
-        console.error(
-          "Error in PoongToday daily star balloon cron job:",
-          error
-        );
-      }
-    }, { timezone: "Asia/Seoul" });
+    try {
+      // PoongToday daily service - every 3 hours
+      cron.schedule(
+        "0 */3 * * *",
+        async () => {
+          console.log(
+            `Running PoongToday at ${new Date().toLocaleString("en-US", {
+              timeZone: "Asia/Seoul",
+            })}`
+          );
+          try {
+            await this.poongTodayDailyService.startScraping();
+            console.log("Finished PoongToday daily star balloon service");
+          } catch (error) {
+            console.error(
+              "Error in PoongToday daily star balloon cron job:",
+              error
+            );
+          }
+        },
+        { timezone: "Asia/Seoul" }
+      );
 
-    // PoongToday broadcast service - once per day
-    cron.schedule("0 0 * * *", async () => {
-      console.log(`Running PoongToday broadcast channel history service at ${new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })}`);
-      try {
-        await this.poongTodayBroadcastService.startScraping();
-        console.log("Finished PoongToday broadcast channel history service");
-      } catch (error) {
-        console.error(
-          "Error in PoongToday broadcast channel history cron job:",
-          error
-        );
-      }
-    }, { timezone: "Asia/Seoul" });
+      // PoongToday broadcast service - once per day
+      cron.schedule(
+        "0 0 * * *",
+        async () => {
+          console.log(
+            `Running PoongToday broadcast channel history service at ${new Date().toLocaleString(
+              "en-US",
+              { timeZone: "Asia/Seoul" }
+            )}`
+          );
+          try {
+            await this.poongTodayBroadcastService.startScraping();
+            console.log(
+              "Finished PoongToday broadcast channel history service"
+            );
+          } catch (error) {
+            console.error(
+              "Error in PoongToday broadcast channel history cron job:",
+              error
+            );
+          }
+        },
+        { timezone: "Asia/Seoul" }
+      );
 
-    // Viewership service - every 3 hours
-    cron.schedule("0 */3 * * *", async () => {
-      console.log(`Running Viewership service at ${new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })}`);
-      try {
-        await this.viewershipService.startScraping();
-        console.log("Finished Viewership service");
-      } catch (error) {
-        console.error("Error in Viewership cron job:", error);
-      }
-    }, { timezone: "Asia/Seoul" });
+      // Viewership service - every 3 hours
+      cron.schedule(
+        "0 */3 * * *",
+        async () => {
+          console.log(
+            `Running Viewership service at ${new Date().toLocaleString(
+              "en-US",
+              { timeZone: "Asia/Seoul" }
+            )}`
+          );
+          try {
+            await this.viewershipService.startScraping();
+            console.log("Finished Viewership service");
+          } catch (error) {
+            console.error("Error in Viewership cron job:", error);
+          }
+        },
+        { timezone: "Asia/Seoul" }
+      );
 
-    // Viewership service - daily
-    cron.schedule("5 * * * *", async () => {
-      console.log(`Running Viewership service at ${new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })}`);
-      try {
-        await this.viewershipDailySubscribeService.startScraping();
-      } catch (error) {
-        console.error("Error in Viewership daily subscribe cron job:", error);
-      }
-    }, { timezone: "Asia/Seoul" });
+      // Viewership service - daily
+      cron.schedule(
+        "5 * * * *",
+        async () => {
+          console.log(
+            `Running Viewership service at ${new Date().toLocaleString(
+              "en-US",
+              { timeZone: "Asia/Seoul" }
+            )}`
+          );
+          try {
+            await this.viewershipDailySubscribeService.startScraping();
+          } catch (error) {
+            console.error(
+              "Error in Viewership daily subscribe cron job:",
+              error
+            );
+          }
+        },
+        { timezone: "Asia/Seoul" }
+      );
 
-    // Playboard services - daily for broadcast and statistics
-    cron.schedule("0 0 * * *", async () => {
-      console.log(`Running Playboard broadcast service at ${new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })}`);
-      try {
-        await this.playboardBroadcastService.startScraping();
-      } catch (error) {
-        console.error("Error in Playboard broadcast cron job:", error);
-      }
+      // Playboard services - daily for broadcast and statistics
+      cron.schedule(
+        "0 0 * * *",
+        async () => {
+          console.log(
+            `Running Playboard broadcast service at ${new Date().toLocaleString(
+              "en-US",
+              { timeZone: "Asia/Seoul" }
+            )}`
+          );
+          try {
+            await this.playboardBroadcastService.startScraping();
+          } catch (error) {
+            console.error("Error in Playboard broadcast cron job:", error);
+          }
 
-      console.log(`Running Playboard super chatted service at ${new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })}`);
-      try {
-        await this.playboardSuperChattedService.startScraping();
-      } catch (error) {
-        console.error("Error in Playboard super chatted cron job:", error);
-      }
+          console.log(
+            `Running Playboard super chatted service at ${new Date().toLocaleString(
+              "en-US",
+              { timeZone: "Asia/Seoul" }
+            )}`
+          );
+          try {
+            await this.playboardSuperChattedService.startScraping();
+          } catch (error) {
+            console.error("Error in Playboard super chatted cron job:", error);
+          }
 
-      console.log(`Running Playboard viewed service at ${new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })}`);
-      try {
-        await this.playboardViewedService.startScraping();
-      } catch (error) {
-        console.error("Error in Playboard viewed cron job:", error);
-      }
+          console.log(
+            `Running Playboard viewed service at ${new Date().toLocaleString(
+              "en-US",
+              { timeZone: "Asia/Seoul" }
+            )}`
+          );
+          try {
+            await this.playboardViewedService.startScraping();
+          } catch (error) {
+            console.error("Error in Playboard viewed cron job:", error);
+          }
 
-      console.log(`Running Playboard live viewers service service at ${new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })}`);
-      try {
-        await this.playboardLiveViewersService.startScraping();
-      } catch (error) {
-        console.error("Error in Playboard live viewers cron job:", error);
-      }
+          console.log(
+            `Running Playboard live viewers service service at ${new Date().toLocaleString(
+              "en-US",
+              { timeZone: "Asia/Seoul" }
+            )}`
+          );
+          try {
+            await this.playboardLiveViewersService.startScraping();
+          } catch (error) {
+            console.error("Error in Playboard live viewers cron job:", error);
+          }
 
-      console.log(`Running YouTube broadcast service at ${new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })}`);
-      try {
-        await this.youtubeService.startScraping();
-      } catch (error) {
-        console.error("Error in YouTube broadcast cron job:", error);
-      }
-    }, { timezone: "Asia/Seoul" });
+          console.log(
+            `Running YouTube broadcast service at ${new Date().toLocaleString(
+              "en-US",
+              { timeZone: "Asia/Seoul" }
+            )}`
+          );
+          try {
+            await this.youtubeService.startScraping();
+          } catch (error) {
+            console.error("Error in YouTube broadcast cron job:", error);
+          }
+        },
+        { timezone: "Asia/Seoul" }
+      );
+    } catch (error) {
+      console.error("Error in cron jobs:", error);
+    }
 
     console.log("All cron jobs scheduled");
   }
