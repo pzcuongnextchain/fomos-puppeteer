@@ -105,26 +105,14 @@ export class CronService {
       );
 
       // Viewership service - daily
-      cron.schedule(
-        "5 * * * *",
-        async () => {
-          console.log(
-            `Running Viewership service at ${new Date().toLocaleString(
-              "en-US",
-              { timeZone: "Asia/Seoul" }
-            )}`
-          );
-          try {
-            await this.viewershipDailySubscribeService.startScraping();
-          } catch (error) {
-            console.error(
-              "Error in Viewership daily subscribe cron job:",
-              error
-            );
-          }
-        },
-        { timezone: "Asia/Seoul" }
-      );
+      cron.schedule("0 0 * * *", async () => {
+        console.log(`Running Viewership service at ${new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })}`);
+        try {
+          await this.viewershipDailySubscribeService.startScraping();
+        } catch (error) {
+          console.error("Error in Viewership daily subscribe cron job:", error);
+        }
+      }, { timezone: "Asia/Seoul" });
 
       // Playboard services - daily for broadcast and statistics
       cron.schedule(
