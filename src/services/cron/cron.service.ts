@@ -106,7 +106,7 @@ export class CronService {
 
       // Viewership service - daily
       cron.schedule("0 0 * * *", async () => {
-        console.log(`Running Viewership service at ${new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })}`);
+        console.log(`Running Viewership Daily Subscribe service at ${new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })}`);
         try {
           await this.viewershipDailySubscribeService.startScraping();
         } catch (error) {
