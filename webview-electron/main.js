@@ -3,6 +3,7 @@ const { app, BrowserWindow, session, ipcMain } = require("electron");
 app.commandLine.appendSwitch("remote-debugging-port", "8315");
 app.commandLine.appendSwitch("enable-features", "OutOfBlinkCors");
 app.commandLine.appendSwitch("disable-site-isolation-trials");
+app.commandLine.appendSwitch("--no-sandbox");
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
